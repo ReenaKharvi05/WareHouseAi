@@ -15,13 +15,13 @@ const navigation = [
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["Admin", "Inspector", "Manager"],
+    roles: ["Admin",  "Manager"],
   },
   {
     name: "Inspections",
-    href: "/inspections",
+    href: "/inspector/dashboard",
     icon: ClipboardCheck,
-    roles: ["Admin", "Inspector"],
+    roles: ["Inspector"],
   },
   {
     name: "My Inspections",
@@ -65,18 +65,18 @@ const navigation = [
     icon: Users,
     roles: ["Admin"],
   },
-  {
-    name: "Reports",
-    href: "/reports",
-    icon: BarChart3,
-    roles: ["Admin", "Manager"],
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-    roles: ["Admin"],
-  },
+  // {
+  //   name: "Reports",
+  //   href: "/reports",
+  //   icon: BarChart3,
+  //   roles: ["Admin", "Manager"],
+  // },
+  // {
+  //   name: "Settings",
+  //   href: "/settings",
+  //   icon: Settings,
+  //   roles: ["Admin"],
+  // },
 ]
 
 interface SidebarProps {
