@@ -169,6 +169,7 @@ class Evidence(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     inspection_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    question_id: Mapped[Optional[int]] = mapped_column(Integer)
     file_path: Mapped[str] = mapped_column(String(500))
     file_type: Mapped[Optional[str]] = mapped_column(String(50))
     uploaded_at: Mapped[Optional[datetime.datetime]] = mapped_column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))

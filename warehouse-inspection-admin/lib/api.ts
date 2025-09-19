@@ -92,6 +92,64 @@ export async function uploadEvidence(inspectionId: number, file: File): Promise<
   return data
 }
 
+export interface ApiEntityRef { id?: number | null; name?: string | null }
+export interface ApiInspectorRef { id?: number | null; username?: string | null; full_name?: string | null }
+export interface ApiInspectionSummary {
+  Id_Inspections: number
+  warehouse?: ApiEntityRef | null
+  commodity?: ApiEntityRef | null
+  inspector?: ApiInspectorRef | null
+  Created_At: string
+  Status: string
+  Remarks?: string
+  Manager_Remarks?: string
+}
+
+export async function listInspections(params?: { pending_only?: boolean; inspector_id?: number }) {
+  const { data } = await api.get<ApiInspectionSummary[]>(`/api/inspections`, { params })
+  return data
+}
+
+export async function getInspectionDetail(inspectionId: number) {
+  const { data } = await api.get(`/api/inspections/${inspectionId}`)
+  return data as {
+    inspection: {
+      id: number
+      warehouse?: ApiEntityRef | null
+      commodity?: ApiEntityRef | null
+      inspector?: ApiInspectorRef | null
+      status: "Pending" | "Accepted" | "Rejected"
+      manager_remarks?: string | null
+    }
+    answers: Array<{
+      question_id: number
+      question_text: string
+      answer?: string
+      remarks?: string
+      evidence?: Array<{ id: number; file_url: string; file_type?: string }>
+    }>
+    evidence: Array<{ id: number; file_url: string; file_type?: string }>
+  }
+}
+
+export async function reviewInspection(
+  inspectionId: number,
+  payload: { status: "Accepted" | "Rejected"; manager_remarks?: string }
+) {
+  const { data } = await api.put(`/api/inspections/${inspectionId}/review`, payload)
+  return data
+}
+
+export async function getManagerInspectors(managerId: number) {
+  const { data } = await api.get(`/api/managers/${managerId}/inspectors`)
+  return data as Array<{ id: number; UserName?: string; Full_Name?: string; EmailId?: string; Role?: string }>
+}
+
+export async function getManagerInspections(managerId: number, status?: "Pending" | "Accepted" | "Rejected") {
+  const { data } = await api.get(`/api/managers/${managerId}/inspections`, { params: { status } })
+  return data as ApiInspectionSummary[]
+}
+
 export interface ApiWarehouse {
   Id_Warehouse: number
   Warehouse_Name: string
