@@ -21,30 +21,29 @@ export function LoginForm() {
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setError("")
-  setIsLoading(true)
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
 
-  try {
-    const { user } = await login({ email, password })
-    const role = user.role.trim().toLowerCase()
+    try {
+      const { user } = await login({ email, password })
+      const role = user.role.trim().toLowerCase()
 
-    if (role === "admin") {
-      router.push("/dashboard")
-    } else if (role === "inspector") {
-      router.push("/inspector/dashboard")
-    } else if (role === "manager") {
-      router.push("/dashboard")
-    } else {
-      router.push("/dashboard") // fallback
+      if (role === "admin") {
+        router.push("/dashboard")
+      } else if (role === "inspector") {
+        router.push("/inspector/dashboard")
+      } else if (role === "manager") {
+        router.push("/dashboard")
+      } else {
+        router.push("/dashboard")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed")
+    } finally {
+      setIsLoading(false)
     }
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Login failed")
-  } finally {
-    setIsLoading(false)
   }
-}
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
@@ -59,13 +58,13 @@ export function LoginForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Email</Label>
               <Input
                 id="username"
                 type="text"
                 value={email}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="you@example.com"
                 required
                 disabled={isLoading}
               />

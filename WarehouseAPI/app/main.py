@@ -5,8 +5,11 @@ from .database import SessionLocal, engine, Base
 from .routers import warehouse as warehouse_router
 from .routers import users as users_router
 from .routers import commodities as commodities_router
-from .routers import inceptor as inceptor_router
 from .routers import inspectionsDetails as inspectionsDetails_router
+from .routers import inspector as inspector_router
+from .routers import manager as manager_router
+from .routers import admin as admin_router
+from .routers import questions as questions_router
 from . import crud, schemas
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict
@@ -33,7 +36,10 @@ app.include_router(users_router.router)
 app.include_router(commodities_router.router)
 app.include_router(inspectionsDetails_router.router)
 
-app.include_router(inceptor_router.router)
+app.include_router(inspector_router.router)
+app.include_router(manager_router.router)
+app.include_router(admin_router.router)
+app.include_router(questions_router.router)
 Base.metadata.create_all(bind=engine)
 
 # app = FastAPI(title="Warehouse Inspection API")
@@ -45,17 +51,24 @@ def get_db():
         yield db
     finally:
         db.close()
-@app.post("/login", response_model=schemas.LoginResponse, tags=["Login"])
+@app.post("/auth/login", response_model=schemas.LoginResponse, tags=["Auth"])
 def login(request: schemas.LoginRequest, db: Session = Depends(get_db)):
     user = crud.authenticate_user(db, request.EmailId, request.Password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    # Lightweight JWT token (unsigned dev token if PyJWT unavailable)
+    try:
+        import jwt  # type: ignore
+        token = jwt.encode({"sub": user.idusers, "role": user.Role}, "dev-secret", algorithm="HS256")
+    except Exception:
+        token = f"token-{user.idusers}"
     return {
         "id": user.idusers,
         "UserName": user.UserName,
         "Role": user.Role,
         "EmailId": user.EmailId,
-        "message": "Login successful"
+        "message": "Login successful",
+        "token": token,
     }
 
 @app.get("/inspections/counts", response_model=schemas.InspectionCounts, tags=["Inspections"])

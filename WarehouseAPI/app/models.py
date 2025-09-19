@@ -46,7 +46,6 @@ class Users(Base):
     Password: Mapped[Optional[str]] = mapped_column(String(45))
     Is_Active: Mapped[Optional[int]] = mapped_column(Integer, server_default=text("'1'"))
 
-    inspector_inspectionform: Mapped[list['InspectorInspectionform']] = relationship('InspectorInspectionform', back_populates='inspector')
     managers: Mapped[list['Managers']] = relationship('Managers', back_populates='users')
     inspections: Mapped[list['Inspections']] = relationship('Inspections', back_populates='users')
     user_warehouse_map: Mapped[list['UserWarehouseMap']] = relationship('UserWarehouseMap', back_populates='User')
@@ -67,56 +66,7 @@ class Warehouses(Base):
     user_warehouse_map: Mapped[list['UserWarehouseMap']] = relationship('UserWarehouseMap', back_populates='Warehouse')
 
 
-class InspectorInspectionform(Base):
-    __tablename__ = 'inspector_inspectionform'
-    __table_args__ = (
-        ForeignKeyConstraint(['inspector_id'], ['users.idusers'], name='fk_inspectorId_idinspector'),
-        Index('fk_inspectorId_idinspector_idx', 'inspector_id')
-    )
-
-    idinspector_inspectionform: Mapped[int] = mapped_column(Integer, primary_key=True)
-    inspector_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    NatureOfAgreement: Mapped[Optional[str]] = mapped_column(String(45))
-    AgreementIsValid: Mapped[Optional[str]] = mapped_column(String(45))
-    PremisesDetails: Mapped[Optional[str]] = mapped_column(String(45))
-    StockAndKey: Mapped[Optional[str]] = mapped_column(String(45))
-    DoorsAndWindows: Mapped[Optional[str]] = mapped_column(String(45))
-    AnyDamageInStructure: Mapped[Optional[str]] = mapped_column(String(45))
-    WaterLogging: Mapped[Optional[str]] = mapped_column(String(45))
-    VentilationAvailable: Mapped[Optional[str]] = mapped_column(String(45))
-    ElectricalFittings: Mapped[Optional[str]] = mapped_column(String(45))
-    SignsOfSeepage: Mapped[Optional[str]] = mapped_column(String(45))
-    SignsOfInfestation: Mapped[Optional[str]] = mapped_column(String(45))
-    TypeOfConstruction: Mapped[Optional[str]] = mapped_column(String(45))
-    ConditionOfRoof: Mapped[Optional[str]] = mapped_column(String(45))
-    PuccaWall: Mapped[Optional[str]] = mapped_column(String(45))
-    SurroundingAreaWithWater: Mapped[Optional[str]] = mapped_column(String(45))
-    HistoryOfFlooding: Mapped[Optional[str]] = mapped_column(String(45))
-    LicenseOfFSSAI: Mapped[Optional[str]] = mapped_column(String(45))
-    PhysicalStockMatch: Mapped[Optional[str]] = mapped_column(String(45))
-    CommodityVarietyMatch: Mapped[Optional[str]] = mapped_column(String(45))
-    AverageSizeOfBagPresent: Mapped[Optional[str]] = mapped_column(String(45))
-    StacksAreProperlyArranged: Mapped[Optional[str]] = mapped_column(String(45))
-    StackAndLotCards: Mapped[Optional[str]] = mapped_column(String(45))
-    LenderNameDIsplayed: Mapped[Optional[str]] = mapped_column(String(45))
-    StockRegisterIsUpdated: Mapped[Optional[str]] = mapped_column(String(45))
-    CopiesOfDocsAvailable: Mapped[Optional[str]] = mapped_column(String(45))
-    StockFoundOverlapping: Mapped[Optional[str]] = mapped_column(String(45))
-    AdulteratedCommodity: Mapped[Optional[str]] = mapped_column(String(45))
-    UnrecoveredStock: Mapped[Optional[str]] = mapped_column(String(45))
-    LastFumigationRecord: Mapped[Optional[str]] = mapped_column(String(45))
-    RandomSamplesTaken: Mapped[Optional[str]] = mapped_column(String(45))
-    InfestationObservedInStock: Mapped[Optional[str]] = mapped_column(String(45))
-    NameOfStorageInCharge: Mapped[Optional[str]] = mapped_column(String(45))
-    InChargeWearingId: Mapped[Optional[str]] = mapped_column(String(45))
-    CMServiceStaffVisit: Mapped[Optional[str]] = mapped_column(String(45))
-    LastInspectionDone: Mapped[Optional[str]] = mapped_column(String(45))
-    Selection: Mapped[Optional[str]] = mapped_column(String(45))
-    Remark: Mapped[Optional[str]] = mapped_column(String(45))
-    Images: Mapped[Optional[str]] = mapped_column(String(45))
-    Status: Mapped[Optional[str]] = mapped_column(String(45))
-
-    inspector: Mapped['Users'] = relationship('Users', back_populates='inspector_inspectionform')
+    # removed deprecated inspector_inspectionform relationship
 
 
 class Managers(Base):
@@ -208,3 +158,19 @@ class InspectionAnswers(Base):
 
     inspection: Mapped['Inspections'] = relationship('Inspections', back_populates='inspection_answers')
     question: Mapped['Questions'] = relationship('Questions', back_populates='inspection_answers')
+
+
+class Evidence(Base):
+    __tablename__ = 'evidence'
+    __table_args__ = (
+        ForeignKeyConstraint(['inspection_id'], ['inspections.Id_Inspections'], ondelete='CASCADE', name='evidence_ibfk_1'),
+        Index('inspection_id', 'inspection_id')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    inspection_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500))
+    file_type: Mapped[Optional[str]] = mapped_column(String(50))
+    uploaded_at: Mapped[Optional[datetime.datetime]] = mapped_column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
+
+    inspection: Mapped['Inspections'] = relationship('Inspections')

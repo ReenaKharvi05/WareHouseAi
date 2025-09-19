@@ -4,7 +4,6 @@ from datetime import datetime
 
 class InspectionBase(BaseModel):
     Warehouse_Id: int
-    Inspector_Id: int
     Manager_Id: int
     Data: str
     Status: str
@@ -40,3 +39,55 @@ class InspectionDetailsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InspectionCreateRequest(BaseModel):
+    Warehouse_Id: int
+    Manager_Id: int
+    Commodity_Id: Optional[int] = None
+    Remarks: Optional[str] = None
+
+
+class InspectionCreateResponse(BaseModel):
+    inspection_id: int
+
+
+class InspectionAnswerCreate(BaseModel):
+    question_id: int
+    answer: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+class AnswerItem(BaseModel):
+    question_id: int
+    answer: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+class InspectionWithAnswersCreate(BaseModel):
+    warehouse_id: int
+    commodity_id: int
+    inspector_id: int
+    answers: list[InspectionAnswerCreate]
+
+    class Config:
+        extra = 'ignore'
+
+
+class InspectionCreateWithAnswersResponse(BaseModel):
+    inspection_id: int
+    saved_answers: int
+
+class QuestionResponse(BaseModel):
+    id: int
+    text: str
+    category: Optional[str] = None
+    risk_weight: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ApproveRequest(BaseModel):
+    approved: bool
+    remarks: Optional[str] = None
