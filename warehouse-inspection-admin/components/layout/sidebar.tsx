@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { LayoutDashboard, Users, Warehouse, ClipboardCheck, BarChart3, Settings, Menu, Package } from "lucide-react"
+import { LayoutDashboard, Users, Warehouse, ClipboardCheck, BarChart3, Settings, Menu, Package, CheckCircle2, Clock } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
 const navigation = [
@@ -21,7 +21,31 @@ const navigation = [
     name: "Inspections",
     href: "/inspections",
     icon: ClipboardCheck,
-    roles: ["Admin", "Inspector", "Manager"],
+    roles: ["Admin", "Inspector"],
+  },
+  {
+    name: "My Inspections",
+    href: "/inspector/inspections",
+    icon: ClipboardCheck,
+    roles: ["Inspector"],
+  },
+  {
+    name: "Pending Inspections",
+    href: "/manager/inspections",
+    icon: Clock,
+    roles: ["Manager"],
+  },
+  {
+    name: "Reviewed Inspections",
+    href: "/manager/reviewed",
+    icon: CheckCircle2,
+    roles: ["Manager"],
+  },
+  {
+    name: "Inspectors",
+    href: "/manager/inspectors",
+    icon: Users,
+    roles: ["Manager"],
   },
   {
     name: "Warehouses",

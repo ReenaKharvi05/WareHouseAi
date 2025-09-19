@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 
 from ..database import SessionLocal
-from ..models import Warehouses, UserWarehouseMap, Questions, Inspections, InspectionAnswers, Evidence
+from ..models import Warehouses, UserWarehouseMap, Questions, Inspections, InspectionAnswers, Evidence, Users, Commoditymaster
 from ..schemas.inspection import (
     InspectionCreateRequest,
     InspectionCreateResponse,
@@ -68,7 +68,7 @@ def create_inspection(
         Warehouse_Id=payload.warehouse_id,
         Inspector_Id=payload.inspector_id,
         Manager_Id=mapping.Manager_id,
-        Status="pending",
+        Status="Pending",
         Commodity_Id=payload.commodity_id,
         Remarks=None,
     )
@@ -115,6 +115,110 @@ def save_answers(
     db.bulk_save_objects(records)
     db.commit()
     return {"status": "success", "saved": len(records)}
+
+
+@router.get("/inspections/{inspection_id}")
+def get_inspection_detail(inspection_id: int, request: Request, db: Session = Depends(get_db)):
+    entity = db.query(Inspections).filter(Inspections.Id_Inspections == inspection_id).first()
+    if not entity:
+        raise HTTPException(status_code=404, detail="Inspection not found")
+
+    answers = (
+        db.query(InspectionAnswers, Questions)
+        .join(Questions, Questions.id == InspectionAnswers.question_id)
+        .filter(InspectionAnswers.inspection_id == inspection_id)
+        .all()
+    )
+    evidence_rows = db.query(Evidence).filter(Evidence.inspection_id == inspection_id).all()
+
+    # Resolve human-readable names
+    warehouse = db.query(Warehouses).filter(Warehouses.Id_Warehouse == entity.Warehouse_Id).first()
+    commodity = (
+        db.query(Commoditymaster).filter(Commoditymaster.IdCommodity == entity.Commodity_Id).first()
+        if entity.Commodity_Id is not None
+        else None
+    )
+    inspector = db.query(Users).filter(Users.idusers == entity.Inspector_Id).first()
+
+    base_url = str(request.base_url).rstrip('/')
+    def to_file_url(path: str | None) -> str | None:
+        if not path:
+            return None
+        import os
+        file_name = os.path.basename(path)
+        return f"{base_url}/uploads/{file_name}"
+
+    return {
+        "inspection": {
+            "id": entity.Id_Inspections,
+            "warehouse": {"id": warehouse.Id_Warehouse, "name": warehouse.Warehouse_Name} if warehouse else None,
+            "commodity": (
+                {"id": commodity.IdCommodity, "name": commodity.Commodity_Name} if commodity else None
+            ),
+            "inspector": {
+                "id": inspector.idusers if inspector else None,
+                "username": inspector.UserName if inspector else None,
+                "full_name": inspector.Full_Name if inspector else None,
+            },
+            "status": entity.Status,
+            "manager_remarks": entity.Manager_Remarks,
+        },
+        "answers": [
+            {
+                "question_id": a.question_id,
+                "question_text": q.text_,
+                "answer": a.answer,
+                "remarks": a.remarks,
+                "evidence": [
+                    {
+                        "id": e.id,
+                        "file_url": to_file_url(e.file_path),
+                        "file_type": e.file_type,
+                    }
+                    for e in evidence_rows
+                    if e.question_id == a.question_id
+                ],
+            }
+            for a, q in answers
+        ],
+        "evidence": [
+            {
+                "id": e.id,
+                "file_url": to_file_url(e.file_path),
+                "file_type": e.file_type,
+            }
+            for e in evidence_rows
+        ],
+    }
+
+
+@router.get("/inspectors/{inspector_id}/inspections")
+def list_inspector_inspections(inspector_id: int, db: Session = Depends(get_db)):
+    rows = (
+        db.query(Inspections)
+        .filter(Inspections.Inspector_Id == inspector_id)
+        .order_by(Inspections.Created_At.desc())
+        .all()
+    )
+    result = []
+    for i in rows:
+        wh = db.query(Warehouses).filter(Warehouses.Id_Warehouse == i.Warehouse_Id).first()
+        cm = db.query(Commoditymaster).filter(Commoditymaster.IdCommodity == i.Commodity_Id).first() if i.Commodity_Id else None
+        ins = db.query(Users).filter(Users.idusers == i.Inspector_Id).first()
+        result.append({
+            "Id_Inspections": i.Id_Inspections,
+            "warehouse": {"id": wh.Id_Warehouse, "name": wh.Warehouse_Name} if wh else None,
+            "commodity": ({"id": cm.IdCommodity, "name": cm.Commodity_Name} if cm else None),
+            "inspector": {
+                "id": ins.idusers if ins else None,
+                "username": ins.UserName if ins else None,
+                "full_name": ins.Full_Name if ins else None,
+            },
+            "Created_At": i.Created_At,
+            "Status": i.Status,
+            "Manager_Remarks": i.Manager_Remarks,
+        })
+    return result
 
 
 @router.post("/inspections/{inspection_id}/evidence")

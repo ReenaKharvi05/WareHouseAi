@@ -13,6 +13,8 @@ from .routers import questions as questions_router
 from . import crud, schemas
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict
+from fastapi.staticfiles import StaticFiles
+import os
 
 
 app = FastAPI()
@@ -70,6 +72,11 @@ def login(request: schemas.LoginRequest, db: Session = Depends(get_db)):
         "message": "Login successful",
         "token": token,
     }
+
+# Mount uploads directory as static for serving evidence files
+uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "uploads"))
+if os.path.isdir(uploads_dir):
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 @app.get("/inspections/counts", response_model=schemas.InspectionCounts, tags=["Inspections"])
 def inspections_counts(db: Session = Depends(get_db)):
