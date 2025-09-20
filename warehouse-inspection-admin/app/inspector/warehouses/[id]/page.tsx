@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { fetchCommodities } from "@/lib/api"
 import type { Commodity } from "@/lib/types"
+import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -12,27 +13,40 @@ import { AlertTriangle } from "lucide-react"
 
 export default function WarehouseDetailPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   const router = useRouter()
   const [commodities, setCommodities] = useState<Commodity[]>([])
   const [selectedCommodity, setSelectedCommodity] = useState<Commodity | null>(null)
+  const [warehouseName, setWarehouseName] = useState<string>("")
 
   useEffect(() => {
     fetchCommodities()
       .then(setCommodities)
-      .catch(err => console.error("Error fetching commoditiess:", err))
-  }, [])
+      .catch(err => console.error("Error fetching commodities:", err))
+
+    // Fetch warehouse name by inspector id
+    if (user?.id) {
+      fetch(`http://127.0.0.1:8000/api/warehouses?inspector_id=${user.id}`)
+        .then(res => res.json())
+        .then((warehouses: any[]) => {
+          console.log("Warehouses API response:", warehouses)
+          // Try both 'id' and 'Id_Warehouse' for matching
+          const found = warehouses.find(w => 
+            w.id?.toString() === id || w.Id_Warehouse?.toString() === id
+          )
+          // Try both 'name' and 'Warehouse_Name' for display
+          setWarehouseName(found?.name ?? found?.Warehouse_Name ?? "")
+        })
+        .catch(err => console.error("Error fetching warehouses:", err))
+    }
+  }, [id, user?.id])
 
   const handleCommoditySelect = (value: string) => {
     const commodity = commodities.find(c => c.id.toString() === value)
     setSelectedCommodity(commodity || null)
-    
-    // Check if commodity requires cold storage
     if (commodity?.Storage === "Cold") {
-      // Don't navigate, just show warning
       return
     }
-    
-    // Continue with normal flow for non-cold storage
     router.push(`/inspector/warehouses/${id}/inspect/${value}`)
   }
 
@@ -40,7 +54,7 @@ export default function WarehouseDetailPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Warehouse {id}</CardTitle>
+          <CardTitle>{warehouseName || "Warehouse"}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -63,8 +77,6 @@ export default function WarehouseDetailPage() {
                 </SelectContent>
               </Select>
             </div>
-            
-            {/* Cold Storage Warning */}
             {selectedCommodity?.Storage === "Cold" && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />

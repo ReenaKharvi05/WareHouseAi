@@ -1,5 +1,5 @@
 "use client"
-
+import { Dialog as ZoomDialog, DialogContent as ZoomDialogContent } from "@/components/ui/dialog"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { listInspections, reviewInspection, getInspectionDetail } from "@/lib/api"
@@ -14,6 +14,7 @@ export default function ManagerInspectionsPage() {
   const qc = useQueryClient()
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [remarks, setRemarks] = useState("")
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["manager-inspections"],
@@ -83,64 +84,78 @@ export default function ManagerInspectionsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Review Inspection #{selectedId}</DialogTitle>
-          </DialogHeader>
-          {!detail ? (
-            <p>Loading...</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">Warehouse: {detail.inspection.warehouse?.name ?? "—"} | Inspector: {detail.inspection.inspector?.full_name || detail.inspection.inspector?.username || "—"}</div>
-              <div>
-                <div className="font-medium mb-2">Answers</div>
-                <div className="max-h-[70vh] overflow-y-auto p-4 space-y-4">
-                  {detail.answers.map((a) => (
-                    <div key={a.question_id} className="rounded-xl shadow p-4">
-                      <p className="font-semibold">{a.question_text}</p>
-                      <p>Answer: {a.answer ?? "—"}</p>
-                      {a.remarks && <p>Remarks: {a.remarks}</p>}
-                    </div>
-                  ))}
-                  {detail.evidence.length > 0 && (
-                    <div className="rounded-xl shadow p-4">
-                      <p className="font-semibold mb-2">Evidence</p>
-                      <div className="flex flex-wrap gap-3">
-                        {detail.evidence.map((e) => (
-                          <div key={e.id} className="w-32">
-                            {e.file_type?.startsWith("image/") ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={e.file_url} alt="evidence" className="w-32 h-32 object-cover rounded" />
-                            ) : (
-                              <a href={e.file_url} className="text-blue-600 underline text-sm" target="_blank" rel="noreferrer">
-                                {e.file_url.split("/").pop()}
-                              </a>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+     // ...existing code...
+<Dialog open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
+  <DialogContent className="max-w-3xl">
+    <DialogHeader>
+     <DialogTitle>
+  Review Inspection of &nbsp;
+  {detail?.inspection?.inspector?.full_name ||
+    detail?.inspection?.inspector?.username ||
+    "—"}
+</DialogTitle>
+    </DialogHeader>
+    {!detail ? (
+      <p>Loading...</p>
+    ) : (
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto"> {/* <-- Make dialog scrollable */}
+        <div className="text-sm text-muted-foreground">
+          Warehouse: {detail.inspection.warehouse?.name ?? "—"} :- Inspector: {detail.inspection.inspector?.full_name || detail.inspection.inspector?.username || "—"}
+          :- Commodity: {detail.inspection.commodity?.name ?? "—"} 
+        </div>
+        <div>
+          <div className="font-medium mb-2">Answers</div>
+          <div className="space-y-4">
+            {detail.answers.map((a) => (
+              <div key={a.question_id} className="rounded-xl shadow p-4">
+                <p className="font-semibold">{a.question_text}</p>
+                <p>Answer: {a.answer ?? "—"}</p>
+                {a.remarks && <p>Remarks: {a.remarks}</p>}
               </div>
-              {/* Evidence consolidated section remains below if needed; answers carry per-question evidence */}
-              <div>
-                <div className="font-medium mb-2">Manager Remarks (optional)</div>
-                <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Enter remarks" />
+            ))}
+            {detail.evidence.length > 0 && (
+              <div className="rounded-xl shadow p-4">
+                <p className="font-semibold mb-2">Evidence</p>
+                <div className="flex flex-wrap gap-3">
+                {detail.evidence.map((e) => (
+                  <div key={e.id} className="w-32">
+                    {e.file_type?.startsWith("image/") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={e.file_url}
+                        alt="evidence"
+                        className="w-32 h-32 object-cover rounded cursor-zoom-in"
+                        onClick={() => setZoomedImage(e.file_url)}
+                      />
+                    ) : (
+                      <a href={e.file_url} className="text-blue-600 underline text-sm" target="_blank" rel="noreferrer">
+                        {e.file_url.split("/").pop()}
+                      </a>
+                    )}
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="destructive" onClick={() => mutation.mutate({ id: selectedId!, status: "Rejected" })} disabled={mutation.isPending}>
-                  Reject
-                </Button>
-                <Button onClick={() => mutation.mutate({ id: selectedId!, status: "Accepted" })} disabled={mutation.isPending}>
-                  Approve
-                </Button>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="font-medium mb-2">Manager Remarks (optional)</div>
+          <Textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Enter remarks" />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="destructive" onClick={() => mutation.mutate({ id: selectedId!, status: "Rejected" })} disabled={mutation.isPending}>
+            Reject
+          </Button>
+          <Button onClick={() => mutation.mutate({ id: selectedId!, status: "Accepted" })} disabled={mutation.isPending}>
+            Approve
+          </Button>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+// ...existing code...
     </div>
   )
 }
