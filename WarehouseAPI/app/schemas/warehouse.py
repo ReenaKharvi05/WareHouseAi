@@ -6,6 +6,9 @@ class WarehouseBase(BaseModel):
     Warehouse_Name: str
     Location: Optional[str] = None
     Code: Optional[str] = None
+    Capacity: Optional[int] = None
+    Latitude: Optional[float] = None
+    Longitude: Optional[float] = None
 
 
 class WarehouseCreate(WarehouseBase):
@@ -16,6 +19,9 @@ class WarehouseUpdate(BaseModel):
     Warehouse_Name: Optional[str] = None
     Location: Optional[str] = None
     Code: Optional[str] = None
+    Capacity: Optional[int] = None
+    Latitude: Optional[float] = None
+    Longitude: Optional[float] = None
 
 
 class WarehouseResponse(WarehouseBase):

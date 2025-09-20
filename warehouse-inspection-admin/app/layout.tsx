@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Suspense } from "react"
+import { QueryProvider } from "@/components/query-provider"
 
 export const metadata: Metadata = {
   title: "Warehouse Inspection Admin Panel",
@@ -22,7 +23,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         <Suspense fallback={<div>Loading...</div>}>
-          <AuthProvider>{children}</AuthProvider>
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryProvider>
         </Suspense>
         <Analytics />
       </body>

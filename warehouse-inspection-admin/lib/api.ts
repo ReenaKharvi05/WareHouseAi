@@ -3,52 +3,52 @@ import type { Warehouse } from "@/lib/types"
 import type { Commodity } from "@/lib/types"
 import axios from "axios"
 
-export async function fetchDashboardStats(): Promise<DashboardStats> {
-  // Fetch in parallel
-  const [inspectionsRes, warehousesRes, inspectorsRes, managersRes, averageRes] =
-    await Promise.all([
-      fetch("http://127.0.0.1:8000/inspections/counts"),
-      fetch("http://127.0.0.1:8000/warehouses/count"),
-      fetch("http://127.0.0.1:8000/inspectors/count"),
-      fetch("http://127.0.0.1:8000/managers/count"),
-      fetch("http://127.0.0.1:8000/inspections/average"),
-    ])
+const api = axios.create({ baseURL: "http://127.0.0.1:8000" })
 
-  if (!inspectionsRes.ok || !warehousesRes.ok || !inspectorsRes.ok || !managersRes.ok || !averageRes.ok) {
-    throw new Error("Failed to fetch dashboard stats")
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token") || localStorage.getItem("warehouse_auth_token")
+  if (token) {
+    config.headers = config.headers ?? {}
+    config.headers["Authorization"] = `Bearer ${token}`
   }
+  return config
+})
 
-  const inspections = await inspectionsRes.json()
-  const warehouses = await warehousesRes.json()
-  const inspectors = await inspectorsRes.json()
-  const managers = await managersRes.json()
-  const average = await averageRes.json()
+export async function login(email: string, password: string) {
+  const { data } = await api.post("/auth/login", { EmailId: email, Password: password })
+  if (data?.token) localStorage.setItem("token", data.token)
+  return data
+}
+
+export async function fetchDashboardStats(): Promise<DashboardStats> {
+  const [inspectionsRes, warehousesRes, inspectorsRes, managersRes, averageRes] = await Promise.all([
+    api.get("/inspections/counts"),
+    api.get("/warehouses/count"),
+    api.get("/inspectors/count"),
+    api.get("/managers/count"),
+    api.get("/inspections/average"),
+  ])
 
   return {
-    totalInspections: inspections.TotalInspections,
-    pendingInspections: inspections.Pending,
-    completedInspections: inspections.Completed,
-    inProgressInspections: inspections.InProgress,
-    totalWarehouses: warehouses.count,
-    activeInspectors: inspectors.count,
-    activeManagers: managers.count,
-    averageScore: average.average,
+    totalInspections: inspectionsRes.data.TotalInspections,
+    pendingInspections: inspectionsRes.data.Pending,
+    completedInspections: inspectionsRes.data.Completed,
+    inProgressInspections: inspectionsRes.data.InProgress,
+    totalWarehouses: warehousesRes.data.count,
+    activeInspectors: inspectorsRes.data.count,
+    activeManagers: managersRes.data.count,
+    averageScore: averageRes.data.average,
     recentInspections: [],
   }
 }
+
 export async function fetchInspectorWarehouses(inspectorId: number): Promise<Warehouse[]> {
-  const res = await fetch(`http://127.0.0.1:8000/inspectors/${inspectorId}/warehouses`)
-  if (!res.ok) throw new Error("Failed to fetch warehouses")
-  return res.json()
+  const { data } = await api.get(`/api/warehouses`, { params: { inspector_id: inspectorId } })
+  return data
 }
 
 export async function fetchCommodities(): Promise<Commodity[]> {
-  const res = await fetch("http://127.0.0.1:8000/commoditiess")
-  if (!res.ok) throw new Error("Failed to fetch commodities")
-
-  const data = await res.json()
-
-  // 🔄 Map DB fields → UI fields
+  const { data } = await api.get("/commodities")
   return data.map((c: any) => ({
     id: c.IdCommodity,
     Commodity_Name: c.Commodity_Name,
@@ -61,7 +61,95 @@ export async function fetchCommodities(): Promise<Commodity[]> {
   }))
 }
 
-// -------------------- Warehouses CRUD (Axios) --------------------
+// Questions / Inspections
+export interface ApiQuestion {
+  id: number
+  text: string
+  category?: string | null
+  risk_weight?: number | null
+}
+
+export async function getQuestions(): Promise<ApiQuestion[]> {
+  const { data } = await api.get<ApiQuestion[]>("/api/questions")
+  // Map backend field text_ -> text if necessary
+  return data.map((q: any) => ({ id: q.id, text: q.text ?? q.text_ ?? "", category: q.category, risk_weight: q.risk_weight }))
+}
+
+export async function createInspectionWithAnswers(payload: {
+  warehouse_id: number
+  commodity_id: number
+  inspector_id: number
+  answers: Array<{ question_id: number; answer?: string; remarks?: string }>
+}): Promise<{ inspection_id: number; saved_answers: number }> {
+  const { data } = await api.post(`/api/inspections`, payload)
+  return data
+}
+
+export async function uploadEvidence(inspectionId: number, file: File): Promise<any> {
+  const form = new FormData()
+  form.append("file", file)
+  const { data } = await api.post(`/api/inspections/${inspectionId}/evidence`, form, { headers: { "Content-Type": "multipart/form-data" } })
+  return data
+}
+
+export interface ApiEntityRef { id?: number | null; name?: string | null }
+export interface ApiInspectorRef { id?: number | null; username?: string | null; full_name?: string | null }
+export interface ApiInspectionSummary {
+  Id_Inspections: number
+  warehouse?: ApiEntityRef | null
+  commodity?: ApiEntityRef | null
+  inspector?: ApiInspectorRef | null
+  Created_At: string
+  Status: string
+  Remarks?: string
+  Manager_Remarks?: string
+}
+
+export async function listInspections(params?: { pending_only?: boolean; inspector_id?: number }) {
+  const { data } = await api.get<ApiInspectionSummary[]>(`/api/inspections`, { params })
+  return data
+}
+
+export async function getInspectionDetail(inspectionId: number) {
+  const { data } = await api.get(`/api/inspections/${inspectionId}`)
+  return data as {
+    inspection: {
+      id: number
+      warehouse?: ApiEntityRef | null
+      commodity?: ApiEntityRef | null
+      inspector?: ApiInspectorRef | null
+      status: "Pending" | "Accepted" | "Rejected"
+      manager_remarks?: string | null
+    }
+    answers: Array<{
+      question_id: number
+      question_text: string
+      answer?: string
+      remarks?: string
+      evidence?: Array<{ id: number; file_url: string; file_type?: string }>
+    }>
+    evidence: Array<{ id: number; file_url: string; file_type?: string }>
+  }
+}
+
+export async function reviewInspection(
+  inspectionId: number,
+  payload: { status: "Accepted" | "Rejected"; manager_remarks?: string }
+) {
+  const { data } = await api.put(`/api/inspections/${inspectionId}/review`, payload)
+  return data
+}
+
+export async function getManagerInspectors(managerId: number) {
+  const { data } = await api.get(`/api/managers/${managerId}/inspectors`)
+  return data as Array<{ id: number; UserName?: string; Full_Name?: string; EmailId?: string; Role?: string }>
+}
+
+export async function getManagerInspections(managerId: number, status?: "Pending" | "Accepted" | "Rejected") {
+  const { data } = await api.get(`/api/managers/${managerId}/inspections`, { params: { status } })
+  return data as ApiInspectionSummary[]
+}
+
 export interface ApiWarehouse {
   Id_Warehouse: number
   Warehouse_Name: string
@@ -75,33 +163,30 @@ export interface CreateApiWarehouse {
   Code?: string
 }
 
-const api = axios.create({ baseURL: "http://localhost:8000" })
-
 export async function getWarehouses(): Promise<ApiWarehouse[]> {
-  const { data } = await api.get<ApiWarehouse[]>("/warehouses/")
+  const { data } = await api.get<ApiWarehouse[]>("/api/warehouses")
   return data
 }
 
 export async function getWarehouse(id: number): Promise<ApiWarehouse> {
-  const { data } = await api.get<ApiWarehouse>(`/warehouses/${id}`)
+  const { data } = await api.get<ApiWarehouse>(`/api/warehouses/${id}`)
   return data
 }
 
 export async function createWarehouse(payload: CreateApiWarehouse): Promise<ApiWarehouse> {
-  const { data } = await api.post<ApiWarehouse>("/warehouses/", payload)
+  const { data } = await api.post<ApiWarehouse>("/api/warehouses", payload)
   return data
 }
 
 export async function updateWarehouse(id: number, payload: CreateApiWarehouse): Promise<ApiWarehouse> {
-  const { data } = await api.put<ApiWarehouse>(`/warehouses/${id}`, payload)
+  const { data } = await api.put<ApiWarehouse>(`/api/warehouses/${id}`, payload)
   return data
 }
 
 export async function deleteWarehouse(id: number): Promise<void> {
-  await api.delete(`/warehouses/${id}`)
+  await api.delete(`/users/${id}`)
 }
 
-// -------------------- Users CRUD (Axios) --------------------
 export interface ApiUser {
   idusers: number
   UserName: string
@@ -144,11 +229,10 @@ export async function updateUser(id: number, payload: UpdateApiUser): Promise<Ap
   return data
 }
 
-export async function deleteUser(id: number): Promise<void> {
+export async function deleteUserAccount(id: number): Promise<void> {
   await api.delete(`/users/${id}`)
 }
 
-// -------------------- Commodities CRUD (Axios, port 8080) --------------------
 export interface ApiCommodity {
   IdCommodity: number
   Commodity_Name: string
@@ -169,23 +253,21 @@ export interface CreateApiCommodity {
 
 export interface UpdateApiCommodity extends Partial<CreateApiCommodity> {}
 
-const commoditiesApi = axios.create({ baseURL: "http://127.0.0.1:8000" })
-
 export async function getCommodities(params?: { name?: string; category?: string; storage?: string; active?: number }): Promise<ApiCommodity[]> {
-  const { data } = await commoditiesApi.get<ApiCommodity[]>("/commodities", { params })
+  const { data } = await api.get<ApiCommodity[]>("/commodities", { params })
   return data
 }
 
 export async function createCommodity(payload: CreateApiCommodity): Promise<ApiCommodity> {
-  const { data } = await commoditiesApi.post<ApiCommodity>("/commodities", payload)
+  const { data } = await api.post<ApiCommodity>("/commodities", payload)
   return data
 }
 
 export async function updateCommodity(id: number, payload: UpdateApiCommodity): Promise<ApiCommodity> {
-  const { data } = await commoditiesApi.put<ApiCommodity>(`/commodities/${id}`, payload)
+  const { data } = await api.put<ApiCommodity>(`/commodities/${id}`, payload)
   return data
 }
 
 export async function deleteCommodity(id: number): Promise<void> {
-  await commoditiesApi.delete(`/commodities/${id}`)
+  await api.delete(`/commodities/${id}`)
 }
