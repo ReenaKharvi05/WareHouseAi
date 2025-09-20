@@ -1,11 +1,19 @@
 "use client"
 
 import { MobileSidebar } from "./sidebar"
-import { UserMenu } from "@/components/auth/user-menu"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
+import { LogOut } from "lucide-react"
 
 export function Header() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    logout()
+    router.push("/login")
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background">
@@ -14,7 +22,10 @@ export function Header() {
         <div className="flex-1">
           <h1 className="text-lg font-semibold md:text-xl">Welcome back, {user?.fullName}</h1>
         </div>
-        <UserMenu />
+        <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </header>
   )

@@ -105,7 +105,7 @@ export interface ApiInspectionSummary {
   Manager_Remarks?: string
 }
 
-export async function listInspections(params?: { pending_only?: boolean; inspector_id?: number }) {
+export async function listInspections(params?: { pending_only?: boolean; inspector_id?: number; status?: string }) {
   const { data } = await api.get<ApiInspectionSummary[]>(`/api/inspections`, { params })
   return data
 }
