@@ -15,6 +15,7 @@ export default function ManagerInspectionsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [remarks, setRemarks] = useState("")
   const [zoomedImage, setZoomedImage] = useState<string | null>(null)
+  const [zoomedMedia, setZoomedMedia] = useState<{ url: string; type: string } | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["manager-inspections"],
@@ -104,8 +105,8 @@ export default function ManagerInspectionsPage() {
           :- Commodity: {detail.inspection.commodity?.name ?? "—"} 
         </div>
         <div>
-          <div className="font-medium mb-2">Answers</div>
-          <div className="space-y-4">
+          {/* <div className="font-medium mb-2">Answers</div> */}
+          {/* <div className="space-y-4">
             {detail.answers.map((a) => (
               <div key={a.question_id} className="rounded-xl shadow p-4">
                 <p className="font-semibold">{a.question_text}</p>
@@ -137,7 +138,43 @@ export default function ManagerInspectionsPage() {
               </div>
               </div>
             )}
+          </div> */}
+         
+<div className="font-medium mb-2">Answers</div>
+<div className="space-y-4">
+  {detail.answers.map((a) => (
+    <div key={a.question_id} className="rounded-xl shadow p-4">
+      <p className="font-semibold">{a.question_text}</p>
+      <p>Answer: {a.answer ?? "—"}</p>
+      {a.remarks && <p>Remarks: {a.remarks}</p>}
+      {a.evidence && a.evidence.length > 0 && (
+        <div className="mt-2">
+          <p className="font-semibold mb-1">Evidence</p>
+          <div className="flex flex-wrap gap-3">
+            {a.evidence.map((e) => (
+              <div key={e.id} className="w-32">
+                {e.file_type?.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={e.file_url}
+                    alt="evidence"
+                    className="w-32 h-32 object-cover rounded cursor-zoom-in"
+                   onClick={() => setZoomedMedia({ url: e.file_url, type: e.file_type ?? "" })}
+                  />
+                ) : (
+                  <a href={e.file_url} className="text-blue-600 underline text-sm" target="_blank" rel="noreferrer">
+                    {e.file_url.split("/").pop()}
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
+        </div>
+      )}
+    </div>
+  ))}
+</div>
+
         </div>
         <div>
           <div className="font-medium mb-2">Manager Remarks (optional)</div>
@@ -155,7 +192,36 @@ export default function ManagerInspectionsPage() {
     )}
   </DialogContent>
 </Dialog>
-// ...existing code...
+
+
+ <ZoomDialog open={!!zoomedMedia} onOpenChange={() => setZoomedMedia(null)}>
+      <ZoomDialogContent className="flex items-center justify-center bg-black p-0" style={{ minHeight: "100vh" }}>
+        {zoomedMedia && (
+          <div className="w-full h-full flex items-center justify-center">
+            {(zoomedMedia.type ?? "").startsWith("image/") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={zoomedMedia.url}
+                alt="Zoomed Evidence"
+                className="max-w-full max-h-screen object-contain"
+                style={{ background: "#222" }}
+              />
+            ) : (zoomedMedia.type ?? "").startsWith("video/") ? (
+              <video
+                src={zoomedMedia.url}
+                controls
+                autoPlay
+                className="max-w-full max-h-screen object-contain bg-black"
+              />
+            ) : (
+              <a href={zoomedMedia.url} target="_blank" rel="noreferrer" className="text-white underline">
+                Download file
+              </a>
+            )}
+          </div>
+        )}
+      </ZoomDialogContent>
+    </ZoomDialog>
     </div>
   )
 }

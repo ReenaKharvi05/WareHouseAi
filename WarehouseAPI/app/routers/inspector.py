@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
+from fastapi import Form
 
 from ..database import SessionLocal
 from ..models import Warehouses, UserWarehouseMap, Questions, Inspections, InspectionAnswers, Evidence, Users, Commoditymaster
@@ -221,10 +222,33 @@ def list_inspector_inspections(inspector_id: int, db: Session = Depends(get_db))
     return result
 
 
+# @router.post("/inspections/{inspection_id}/evidence")
+# def upload_evidence(
+#     inspection_id: int,
+#     file: UploadFile = File(...),
+#     db: Session = Depends(get_db),
+# ):
+#     if not db.query(Inspections).filter(Inspections.Id_Inspections == inspection_id).first():
+#         raise HTTPException(status_code=404, detail="Inspection not found")
+#     import os
+#     uploads_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'uploads'))
+#     os.makedirs(uploads_dir, exist_ok=True)
+#     safe_name = f"{inspection_id}_" + file.filename
+#     file_location = os.path.join(uploads_dir, safe_name)
+#     with open(file_location, 'wb') as f:
+#         f.write(file.file.read())
+#     ev = Evidence(inspection_id=inspection_id, file_path=file_location, file_type=file.content_type)
+#     db.add(ev)
+#     db.commit()
+#     db.refresh(ev)
+#     return {"status": "success", "evidence_id": ev.id}
+
+
 @router.post("/inspections/{inspection_id}/evidence")
 def upload_evidence(
     inspection_id: int,
     file: UploadFile = File(...),
+    question_id: int = Form(...),  # <-- Accept question_id from form data
     db: Session = Depends(get_db),
 ):
     if not db.query(Inspections).filter(Inspections.Id_Inspections == inspection_id).first():
@@ -236,7 +260,12 @@ def upload_evidence(
     file_location = os.path.join(uploads_dir, safe_name)
     with open(file_location, 'wb') as f:
         f.write(file.file.read())
-    ev = Evidence(inspection_id=inspection_id, file_path=file_location, file_type=file.content_type)
+    ev = Evidence(
+        inspection_id=inspection_id,
+        question_id=question_id,  # <-- Store question_id in Evidence
+        file_path=file_location,
+        file_type=file.content_type
+    )
     db.add(ev)
     db.commit()
     db.refresh(ev)

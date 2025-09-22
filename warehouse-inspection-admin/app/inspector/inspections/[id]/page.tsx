@@ -23,7 +23,7 @@ export default function InspectionDetailPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Inspection #{inspection.id}</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Inspection {inspection.commodity?.name ?? "—"}</h1>
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>

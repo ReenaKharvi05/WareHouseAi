@@ -85,11 +85,17 @@ export async function createInspectionWithAnswers(payload: {
   return data
 }
 
-export async function uploadEvidence(inspectionId: number, file: File): Promise<any> {
-  const form = new FormData()
-  form.append("file", file)
-  const { data } = await api.post(`/api/inspections/${inspectionId}/evidence`, form, { headers: { "Content-Type": "multipart/form-data" } })
-  return data
+// export async function uploadEvidence(inspectionId: number, file: File): Promise<any> {
+//   const form = new FormData()
+//   form.append("file", file)
+//   const { data } = await api.post(`/api/inspections/${inspectionId}/evidence`, form, { headers: { "Content-Type": "multipart/form-data" } })
+//   return data
+// }
+export async function uploadEvidence(inspectionId: number, file: File, questionId: number) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("question_id", questionId.toString());
+  return api.post(`/api/inspections/${inspectionId}/evidence`, formData);
 }
 
 export interface ApiEntityRef { id?: number | null; name?: string | null }

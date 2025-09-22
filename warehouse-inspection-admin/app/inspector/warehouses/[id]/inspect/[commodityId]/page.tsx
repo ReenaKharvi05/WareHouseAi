@@ -44,6 +44,7 @@ export default function InspectionFormPage() {
   const handleAnswer = (qid: number, patch: Partial<AnswerDraft>) => {
     setAnswers((prev) => ({ ...prev, [qid]: { ...(prev[qid] || {}), ...patch } }))
   }
+  const hasAnyAnswer = Object.values(answers).some(a => a.answer && a.answer.trim() !== "")
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,10 +63,10 @@ export default function InspectionFormPage() {
       })
       // upload evidence files serially to simplify
       for (const [qidStr, a] of Object.entries(answers)) {
-        if (a.file) {
-          await uploadEvidence(inspection_id, a.file)
-        }
-      }
+  if (a.file) {
+    await uploadEvidence(inspection_id, a.file, Number(qidStr)) // <-- Pass question_id
+  }
+}
       setSuccess("Inspection submitted successfully")
       setTimeout(() => router.push("/inspector/dashboard"), 1200)
     } catch (err: any) {
@@ -130,15 +131,15 @@ export default function InspectionFormPage() {
                               placeholder="Enter remarks"
                             />
                           </div>
-                          <div>
-                            <Label className="mb-2 block">Evidence</Label>
-                            <input
-                              type="file"
-                              accept="image/*,video/*"
-                              onChange={(e) => handleAnswer(q.id, { file: e.target.files?.[0] || null })}
-                              className="block"
-                            />
-                          </div>
+                         <div>
+                          <Label className="mb-2 block">Evidence</Label>
+                          <input
+                            type="file"
+                            accept="image/*,video/*"
+                            onChange={(e) => handleAnswer(q.id, { file: e.target.files?.[0] || null })}
+                            className="block"
+                          />
+                        </div>
                         </div>
                       ))}
                     </div>
@@ -158,9 +159,9 @@ export default function InspectionFormPage() {
               </Alert>
             )}
 
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit Inspection"}
-            </Button>
+             <Button type="submit" disabled={submitting || !hasAnyAnswer}>
+    {submitting ? "Submitting..." : "Submit Inspection"}
+  </Button>
     </form>
         </CardContent>
       </Card>

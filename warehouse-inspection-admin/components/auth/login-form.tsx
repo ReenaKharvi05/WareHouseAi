@@ -64,7 +64,7 @@ export function LoginForm() {
                 type="text"
                 value={email}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="Enter your Email"
                 required
                 disabled={isLoading}
               />
