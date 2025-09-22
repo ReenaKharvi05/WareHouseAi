@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 import { Shimmer } from "./shimmer"
-import { Download, File, Image } from "lucide-react"
+import { Download, File, Image, Play } from "lucide-react"
 
 interface EvidenceItem {
   id: number
@@ -12,9 +12,10 @@ interface EvidenceDisplayProps {
   evidence: EvidenceItem[]
   isLoading?: boolean
   className?: string
+  onPreview?: (item: EvidenceItem) => void
 }
 
-export function EvidenceDisplay({ evidence, isLoading = false, className }: EvidenceDisplayProps) {
+export function EvidenceDisplay({ evidence, isLoading = false, className, onPreview }: EvidenceDisplayProps) {
   if (isLoading) {
     return (
       <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4", className)}>
@@ -37,7 +38,7 @@ export function EvidenceDisplay({ evidence, isLoading = false, className }: Evid
   return (
     <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4", className)}>
       {evidence.map((item) => (
-        <EvidenceItem key={item.id} item={item} />
+        <EvidenceItem key={item.id} item={item} onPreview={onPreview} />
       ))}
     </div>
   )
@@ -45,14 +46,16 @@ export function EvidenceDisplay({ evidence, isLoading = false, className }: Evid
 
 interface EvidenceItemProps {
   item: EvidenceItem
+  onPreview?: (item: EvidenceItem) => void
 }
 
-function EvidenceItem({ item }: EvidenceItemProps) {
+function EvidenceItem({ item, onPreview }: EvidenceItemProps) {
   const isImage = item.file_type?.startsWith("image/")
+  const isVideo = item.file_type?.startsWith("video/")
 
   if (isImage) {
     return (
-      <div className="group cursor-pointer">
+      <div className="group cursor-pointer" onClick={() => onPreview?.(item)}>
         <div className="aspect-square overflow-hidden rounded-xl shadow hover:shadow-lg transition-all duration-200 hover:scale-105">
           <img
             src={item.file_url}
@@ -62,6 +65,20 @@ function EvidenceItem({ item }: EvidenceItemProps) {
           />
         </div>
       </div>
+    )
+  }
+
+  if (isVideo) {
+    return (
+      <button
+        type="button"
+        onClick={() => onPreview?.(item)}
+        className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+        title="Preview video"
+      >
+        <Play className="h-8 w-8 text-blue-600 mb-2" />
+        <span className="text-sm text-gray-700">Video</span>
+      </button>
     )
   }
 

@@ -39,16 +39,16 @@ export default function ReviewedInspectionsPage() {
             <ShimmerTableComponent rows={5} columns={6} />
           ) : (
             <ModernTable>
-              <ModernTableHeader>
-                <ModernTableRow isHeader>
+              {/* <ModernTableHeader> */}
+                {/* <ModernTableRow isHeader>
                   <ModernTableCell>Warehouse Name</ModernTableCell>
                   <ModernTableCell>Commodity Name</ModernTableCell>
                   <ModernTableCell>Inspector Full Name</ModernTableCell>
                   <ModernTableCell>Status</ModernTableCell>
                   <ModernTableCell>Manager Remarks</ModernTableCell>
                   <ModernTableCell>Actions</ModernTableCell>
-                </ModernTableRow>
-              </ModernTableHeader>
+                </ModernTableRow> */}
+              {/* </ModernTableHeader> */}
               <ModernTableBody>
                 {rows.map((i) => (
                   <ModernTableRow key={i.Id_Inspections}>

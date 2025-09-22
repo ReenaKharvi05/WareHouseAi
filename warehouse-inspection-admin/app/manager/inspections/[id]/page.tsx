@@ -1,16 +1,17 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { getInspectionDetail } from "@/lib/api"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getInspectionDetail, reviewInspection } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { Dialog as ZoomDialog, DialogContent as ZoomDialogContent } from "@/components/ui/dialog"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { ArrowLeft, FileText, User, Warehouse, Package } from "lucide-react"
 import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card"
 import { ModernButton } from "@/components/ui/modern-button"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { EvidenceDisplay } from "@/components/ui/evidence-display"
 import { ShimmerInspectionDetail } from "@/components/ui/shimmer"
+import { Textarea } from "@/components/ui/textarea"
 
 interface InspectionDetailPageProps {
   params: {
@@ -21,12 +22,35 @@ interface InspectionDetailPageProps {
 export default function InspectionDetailPage({ params }: InspectionDetailPageProps) {
   const router = useRouter()
   const inspectionId = parseInt(params.id)
-  const [zoomedImage, setZoomedImage] = useState<string | null>(null)
+  const [viewer, setViewer] = useState<null | { type: "image" | "video"; src: string }>(null)
+  const [remarks, setRemarks] = useState("")
+  const qc = useQueryClient()
+  const [answerReviews, setAnswerReviews] = useState<Record<number, { status: "Accepted" | "Rejected" | null; remarks: string }>>({})
+
+  const perAnswerArray = useMemo(() =>
+    Object.entries(answerReviews).map(([question_id, v]) => ({
+      question_id: Number(question_id),
+      status: v.status,
+      manager_remarks: v.remarks || "",
+    })),
+  [answerReviews])
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ["inspection-detail", inspectionId],
     queryFn: () => getInspectionDetail(inspectionId),
     enabled: !!inspectionId,
+  })
+
+  const mutation = useMutation({
+    mutationFn: async ({ status }: { status: "Accepted" | "Rejected" }) => {
+      // Include per-question review details; cast to any to accommodate API typing
+      const payload: any = { status, manager_remarks: remarks, per_answers: perAnswerArray }
+      return (reviewInspection as any)(inspectionId, payload)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["manager-inspections"] })
+      router.push("/manager/inspections")
+    },
   })
 
   if (isLoading) return <ShimmerInspectionDetail />
@@ -46,7 +70,11 @@ export default function InspectionDetailPage({ params }: InspectionDetailPagePro
   return (
     <div className="space-y-6 bg-gray-50 min-h-screen p-6">
       <div className="flex items-center gap-4">
-        <ModernButton variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
+        <ModernButton
+          variant="outline"
+          onClick={() => router.back()}
+          className="flex items-center gap-2 bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 focus-visible:ring-blue-200 transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" />
           Back
         </ModernButton>
@@ -133,9 +161,60 @@ export default function InspectionDetailPage({ params }: InspectionDetailPagePro
                   {answer.evidence && answer.evidence.length > 0 && (
                     <div className="mt-4">
                       <p className="font-medium text-gray-900 mb-3">Evidence for this answer:</p>
-                      <EvidenceDisplay evidence={answer.evidence} />
+                      <EvidenceDisplay
+                        evidence={answer.evidence}
+                        onPreview={(item) =>
+                          setViewer({ type: item.file_type?.startsWith("image/") ? "image" : "video", src: item.file_url })
+                        }
+                      />
                     </div>
                   )}
+                  {/* Manager per-question review */}
+                  <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-200">
+                    <p className="text-sm font-medium text-slate-700 mb-2">Manager Review for this question</p>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <ModernButton
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setAnswerReviews((prev) => ({
+                            ...prev,
+                            [answer.question_id]: { status: "Accepted", remarks: prev[answer.question_id]?.remarks || "" },
+                          }))
+                        }
+                        className={`h-8 px-3 ${answerReviews[answer.question_id]?.status === "Accepted" ? "bg-green-100 border-green-300 text-green-700" : "bg-white text-gray-700 border-gray-300 hover:bg-green-50 hover:text-green-700"}`}
+                      >
+                        Accept
+                      </ModernButton>
+                      <ModernButton
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setAnswerReviews((prev) => ({
+                            ...prev,
+                            [answer.question_id]: { status: "Rejected", remarks: prev[answer.question_id]?.remarks || "" },
+                          }))
+                        }
+                        className={`h-8 px-3 ${answerReviews[answer.question_id]?.status === "Rejected" ? "bg-red-100 border-red-300 text-red-700" : "bg-white text-gray-700 border-gray-300 hover:bg-red-50 hover:text-red-700"}`}
+                      >
+                        Reject
+                      </ModernButton>
+                      {answerReviews[answer.question_id]?.status && (
+                        <span className="ml-1 text-xs text-slate-600">Selected: {answerReviews[answer.question_id]?.status}</span>
+                      )}
+                    </div>
+                    <Textarea
+                      value={answerReviews[answer.question_id]?.remarks || ""}
+                      onChange={(e) =>
+                        setAnswerReviews((prev) => ({
+                          ...prev,
+                          [answer.question_id]: { status: prev[answer.question_id]?.status || null, remarks: e.target.value },
+                        }))
+                      }
+                      placeholder="Optional remarks for this question"
+                      className="rounded-md border-gray-300 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -150,20 +229,61 @@ export default function InspectionDetailPage({ params }: InspectionDetailPagePro
             <ModernCardTitle>General Evidence</ModernCardTitle>
           </ModernCardHeader>
           <ModernCardContent>
-            <EvidenceDisplay evidence={evidence} />
+            <EvidenceDisplay
+              evidence={evidence}
+              onPreview={(item) =>
+                setViewer({ type: item.file_type?.startsWith("image/") ? "image" : "video", src: item.file_url })
+              }
+            />
           </ModernCardContent>
         </ModernCard>
       )}
 
-      {/* Image Zoom Dialog */}
-      <ZoomDialog open={!!zoomedImage} onOpenChange={(open) => !open && setZoomedImage(null)}>
-        <ZoomDialogContent className="max-w-4xl">
-          {zoomedImage && (
-            <img
-              src={zoomedImage}
-              alt="Evidence"
-              className="w-full h-auto max-h-[80vh] object-contain"
+      {/* Manager Review Actions */}
+      <ModernCard>
+        <ModernCardHeader>
+          <ModernCardTitle>Manager Review</ModernCardTitle>
+        </ModernCardHeader>
+        <ModernCardContent>
+          <div className="space-y-4">
+            <Textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder="Enter your remarks about this inspection (optional)"
+              className="rounded-lg border-gray-300 focus:ring-blue-500"
             />
+            <div className="flex justify-end gap-3">
+              <ModernButton
+                variant="reject"
+                onClick={() => mutation.mutate({ status: "Rejected" })}
+                disabled={mutation.isPending}
+                className="flex items-center gap-2"
+              >
+                Reject
+              </ModernButton>
+              <ModernButton
+                variant="approve"
+                onClick={() => mutation.mutate({ status: "Accepted" })}
+                disabled={mutation.isPending}
+                className="flex items-center gap-2"
+              >
+                Approve
+              </ModernButton>
+            </div>
+          </div>
+        </ModernCardContent>
+      </ModernCard>
+
+      {/* Fullscreen preview for image/video */}
+      <ZoomDialog open={!!viewer} onOpenChange={(open) => !open && setViewer(null)}>
+        <ZoomDialogContent className="max-w-5xl">
+          {viewer && (
+            viewer.type === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={viewer.src} alt="Evidence" className="w-full h-auto max-h-[80vh] object-contain" />
+            ) : (
+              <video src={viewer.src} controls autoPlay className="w-full h-auto max-h-[80vh] bg-black rounded" />
+            )
           )}
         </ZoomDialogContent>
       </ZoomDialog>

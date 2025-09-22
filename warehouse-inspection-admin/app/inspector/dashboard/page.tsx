@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { fetchInspectorWarehouses } from "@/lib/api"
 import type { Warehouse } from "@/lib/types"
@@ -15,13 +15,14 @@ export default function InspectorDashboardPage() {
   const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const [checkingId, setCheckingId] = useState<number | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["inspector-warehouses", user?.id],
     queryFn: async () => {
       if (!user?.id) return [] as Warehouse[]
       const apiWarehouses = await fetchInspectorWarehouses(user.id)
-      // Map API to UI type
+  
       const mapped: Warehouse[] = apiWarehouses.map((w: any) => ({
         id: w.Id_Warehouse,
         name: w.Warehouse_Name,
@@ -50,37 +51,52 @@ export default function InspectorDashboardPage() {
   }
 
   const handleWarehouseClick = (warehouse: Warehouse) => {
+    if (checkingId !== null) return
+    setCheckingId(warehouse.id)
     if (!("geolocation" in navigator)) {
       toast({
         variant: "destructive",
         title: "Location not supported",
         description: "Geolocation is not supported by your browser.",
       })
+      setCheckingId(null)
       return
     }
   
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude, accuracy } = position.coords
-        const [whLat, whLng] = warehouse.location.split(",").map(Number)
+        const [whLat, whLng] = warehouse.location.split(",").map((s) => Number(s))
+        if (!isFinite(whLat) || !isFinite(whLng)) {
+          toast({
+            variant: "destructive",
+            title: "Invalid Warehouse Location",
+            description: `Warehouse ${warehouse.name} has invalid coordinates. Please contact support.`,
+          })
+          setCheckingId(null)
+          return
+        }
         const distance = getDistance(latitude, longitude, whLat, whLng)
-        const tolerance = Math.max(200, accuracy)
+        const BASE_TOLERANCE = 150 // meters
+        const MAX_TOLERANCE = 500 // cap tolerance so poor accuracy doesn't allow too much
+        const tolerance = Math.min(Math.max(BASE_TOLERANCE, Math.round(accuracy)), MAX_TOLERANCE)
   
         if (distance <= tolerance) {
           toast({
-            title: "Location Matched ✅",
-            description: `You are at ${warehouse.name}. Redirecting...`,
+            title: "Location Matched ",
+            description: `You are at ${warehouse.name}. Redirecting...` ,
           })
           setTimeout(() => {
-            router.push(`/inspector/warehouses/${warehouse.id}`)
-          }, 800)
+            router.push(`/inspector/warehouses/${warehouse.id}` )
+          }, 200)
         } else {
           toast({
             variant: "destructive",
-            title: "Location Not Matched ❌",
-            description: `Distance: ${Math.round(distance)}m (Allowed: ${Math.round(tolerance)}m)`,
+            title: "Location Not Matched ",
+            description: `Distance: ${Math.round(distance)}m (Allowed: ${Math.round(tolerance)}m)` ,
           })
         }
+        setCheckingId(null)
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
@@ -96,8 +112,9 @@ export default function InspectorDashboardPage() {
             description: "Unable to fetch your location. Try again.",
           })
         }
+        setCheckingId(null)
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 5000 }
     )
   }
   
@@ -143,9 +160,9 @@ export default function InspectorDashboardPage() {
                     <Package className="h-4 w-4" />
                     <span className="text-sm">Capacity: {wh.capacityTons} tons</span>
                   </div>
-                  <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
-                    <Navigation className="h-4 w-4" />
-                    <span>Tap to inspect</span>
+                  <div className={`flex items-center gap-2 text-sm font-medium ${checkingId === wh.id ? "text-gray-500" : "text-blue-600"}`}>
+                    <Navigation className={`h-4 w-4 ${checkingId === wh.id ? "animate-spin" : ""}`} />
+                    <span>{checkingId === wh.id ? "Checking location..." : "Tap to inspect"}</span>
                   </div>
                 </div>
               </ModernCardContent>

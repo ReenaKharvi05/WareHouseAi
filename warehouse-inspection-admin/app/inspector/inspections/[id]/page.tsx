@@ -1,13 +1,18 @@
 "use client"
 
-import { useMemo } from "react"
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getInspectionDetail } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { Play, X } from "lucide-react"
 
 export default function InspectionDetailPage({ params }: { params: { id: string } }) {
   const id = Number(params.id)
+  const router = useRouter()
+  const [viewer, setViewer] = useState<null | { type: "image" | "video"; src: string; name?: string }>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ["inspection-detail", id],
@@ -20,10 +25,46 @@ export default function InspectionDetailPage({ params }: { params: { id: string 
   const inspection = data.inspection
   const answers = data.answers
   const evidence = data.evidence
+  const canEdit = ["pending", "rejected"].includes((inspection.status || "").toLowerCase())
+
+  const normalizedStatus = (inspection.status || "").toString().toLowerCase()
+  const statusBadgeClasses =
+    normalizedStatus === "accepted"
+      ? "bg-green-100 text-green-700 border-green-200"
+      : normalizedStatus === "rejected"
+      ? "bg-red-100 text-red-700 border-red-200"
+      : "bg-amber-100 text-amber-700 border-amber-200" // pending/others as warning
+
+  const openPreview = (type: "image" | "video", src: string, name?: string) => {
+    setViewer({ type, src, name })
+  }
+  const closePreview = () => {
+    setViewer(null)
+  }
+  const getNameFromUrl = (url: string) => {
+    try {
+      const last = url.split("/").pop() || "File"
+      return decodeURIComponent(last.split("?")[0])
+    } catch {
+      return "File"
+    }
+  }
 
   return (
+    <>
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Inspection {inspection.commodity?.name ?? "—"}</h1>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/inspector/inspections/${id}/edit`)}
+            className="bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
+          >
+            Edit Inspection
+          </Button>
+        </div>
+      )}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -40,7 +81,10 @@ export default function InspectionDetailPage({ params }: { params: { id: string 
               <span className="text-muted-foreground">Inspector:</span> {inspection.inspector?.full_name || inspection.inspector?.username || "—"}
             </div>
             <div>
-              <span className="text-muted-foreground">Status:</span> <Badge>{inspection.status}</Badge>
+              <span className="text-muted-foreground">Status:</span>{' '}
+              <Badge variant="outline" className={statusBadgeClasses}>
+                {inspection.status}
+              </Badge>
             </div>
             <div>
               <span className="text-muted-foreground">Manager Remarks:</span> {inspection.manager_remarks ?? "—"}
@@ -64,14 +108,25 @@ export default function InspectionDetailPage({ params }: { params: { id: string 
                 {a.evidence && a.evidence.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-3">
                     {a.evidence.map((ev) => (
-                      <div key={ev.id} className="w-32">
+                      <div key={ev.id} className="w-24 h-24">
                         {ev.file_type?.startsWith("image/") ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={ev.file_url} alt="evidence" className="w-32 h-32 object-cover rounded" />
+                          <img
+                            src={ev.file_url}
+                            alt="evidence"
+                            className="w-24 h-24 object-cover rounded cursor-pointer"
+                            onClick={() => openPreview("image", ev.file_url, getNameFromUrl(ev.file_url))}
+                          />
                         ) : (
-                          <a href={ev.file_url} className="text-blue-600 underline text-sm" target="_blank" rel="noreferrer">
-                            Download
-                          </a>
+                          <button
+                            type="button"
+                            onClick={() => openPreview("video", ev.file_url, getNameFromUrl(ev.file_url))}
+                            className="w-24 h-24 rounded border flex flex-col items-center justify-center gap-1 text-xs text-gray-700 bg-gray-50 hover:bg-blue-50 transition-colors"
+                            title={getNameFromUrl(ev.file_url) || "Video"}
+                          >
+                            <Play className="h-5 w-5 text-blue-600" />
+                            <span className="truncate px-1">Video</span>
+                          </button>
                         )}
                       </div>
                     ))}
@@ -84,14 +139,25 @@ export default function InspectionDetailPage({ params }: { params: { id: string 
                 <p className="font-semibold mb-2">Evidence</p>
                 <div className="flex flex-wrap gap-3">
                   {evidence.map((e) => (
-                    <div key={e.id} className="w-32">
+                    <div key={e.id} className="w-24 h-24">
                       {e.file_type?.startsWith("image/") ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={e.file_url} alt="evidence" className="w-32 h-32 object-cover rounded" />
+                        <img
+                          src={e.file_url}
+                          alt="evidence"
+                          className="w-24 h-24 object-cover rounded cursor-pointer"
+                          onClick={() => openPreview("image", e.file_url, getNameFromUrl(e.file_url))}
+                        />
                       ) : (
-                        <a href={e.file_url} className="text-blue-600 underline text-sm" target="_blank" rel="noreferrer">
-                          Download
-                        </a>
+                        <button
+                          type="button"
+                          onClick={() => openPreview("video", e.file_url, getNameFromUrl(e.file_url))}
+                          className="w-24 h-24 rounded border flex flex-col items-center justify-center gap-1 text-xs text-gray-700 bg-gray-50 hover:bg-blue-50 transition-colors"
+                          title={getNameFromUrl(e.file_url) || "Video"}
+                        >
+                          <Play className="h-5 w-5 text-blue-600" />
+                          <span className="truncate px-1">Video</span>
+                        </button>
                       )}
                     </div>
                   ))}
@@ -102,6 +168,38 @@ export default function InspectionDetailPage({ params }: { params: { id: string 
         </CardContent>
       </Card>
     </div>
+    {viewer && (
+      <div className="fixed inset-0 z-50">
+        <div className="absolute inset-0 bg-black/70" onClick={closePreview} />
+        <div className="relative z-10 h-full w-full flex items-center justify-center p-4">
+          <button
+            type="button"
+            onClick={closePreview}
+            className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 hover:bg-white text-gray-700 flex items-center justify-center shadow"
+            aria-label="Close preview"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="max-w-[95vw] max-h-[90vh]">
+            {viewer.type === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={viewer.src} alt={viewer.name || "preview"} className="max-w-full max-h-[90vh] rounded shadow-2xl" />
+            ) : (
+              <video
+                src={viewer.src}
+                controls
+                autoPlay
+                className="max-w-full max-h-[90vh] rounded shadow-2xl bg-black"
+              />
+            )}
+            {viewer.name && (
+              <div className="mt-2 text-center text-sm text-white/90 truncate">{viewer.name}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

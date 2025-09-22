@@ -61,15 +61,19 @@ export default function WarehouseDetailPage() {
             <div>
               <Label>Select Commodity</Label>
               <Select onValueChange={handleCommoditySelect}>
-                <SelectTrigger>
+                <SelectTrigger className="border-blue-300 hover:border-blue-400 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-colors">
                   <SelectValue placeholder="Choose a commodity" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="border border-blue-200 bg-white shadow-lg ring-1 ring-blue-100">
                   {commodities.length === 0 ? (
                     <div className="p-2 text-sm text-gray-500">No commodities found</div>
                   ) : (
                     commodities.map((c) => (
-                      <SelectItem key={c.id} value={c.id.toString()}>
+                      <SelectItem
+                        key={c.id}
+                        value={c.id.toString()}
+                        className="focus:bg-blue-100 focus:text-blue-800 data-[highlighted]:bg-blue-50 data-[highlighted]:text-blue-700"
+                      >
                         {c.Commodity_Name}
                       </SelectItem>
                     ))

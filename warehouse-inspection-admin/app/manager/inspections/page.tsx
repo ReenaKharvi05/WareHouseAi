@@ -1,6 +1,7 @@
 "use client"
 import { Dialog as ZoomDialog, DialogContent as ZoomDialogContent } from "@/components/ui/dialog"
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { listInspections, reviewInspection, getInspectionDetail } from "@/lib/api"
 import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card"
@@ -11,12 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea"
 import { EvidenceDisplay } from "@/components/ui/evidence-display"
 import { ShimmerInspectionDetail } from "@/components/ui/shimmer"
-import { Clock, Eye, CheckCircle, XCircle } from "lucide-react"
+import { Clock, Eye, CheckCircle, XCircle, Calendar } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 export default function ManagerInspectionsPage() {
   const qc = useQueryClient()
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [remarks, setRemarks] = useState("")
+  const router = useRouter()
   const [zoomedImage, setZoomedImage] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
@@ -24,24 +25,42 @@ export default function ManagerInspectionsPage() {
     queryFn: () => listInspections({ pending_only: true }),
   })
 
-  const { data: detail, isLoading: detailLoading } = useQuery({
-    queryKey: ["inspection-detail", selectedId],
-    queryFn: () => getInspectionDetail(selectedId as number),
-    enabled: !!selectedId,
-  })
-
-  const mutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: "Accepted" | "Rejected" }) => {
-      return reviewInspection(id, { status, manager_remarks: remarks })
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["manager-inspections"] })
-      setSelectedId(null)
-      setRemarks("")
-    },
-  })
+  // Review happens in the dedicated page now
 
   const rows = data ?? []
+  const [query, setQuery] = useState("")
+  const [fromDate, setFromDate] = useState<string>("")
+  const [toDate, setToDate] = useState<string>("")
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return rows.filter((r: any) => {
+      const matchesQuery = q
+        ? (r.warehouse?.name || "").toLowerCase().includes(q) ||
+          (r.commodity?.name || "").toLowerCase().includes(q) ||
+          (r.inspector?.full_name || r.inspector?.username || "").toLowerCase().includes(q)
+        : true
+      let matchesDate = true
+      if (fromDate || toDate) {
+        const created = r.Created_At ? new Date(r.Created_At) : null
+        if (!created) {
+          matchesDate = false
+        } else {
+          if (fromDate) {
+            const f = new Date(fromDate)
+            f.setHours(0, 0, 0, 0)
+            if (created < f) matchesDate = false
+          }
+          if (toDate) {
+            const t = new Date(toDate)
+            t.setHours(23, 59, 59, 999)
+            if (created > t) matchesDate = false
+          }
+        }
+      }
+      return matchesQuery && matchesDate
+    })
+  }, [rows, query, fromDate, toDate])
 
   return (
     <div className="space-y-6 bg-gray-50 min-h-screen p-6">
@@ -58,46 +77,93 @@ export default function ManagerInspectionsPage() {
           </ModernCardTitle>
         </ModernCardHeader>
         <ModernCardContent>
+          {/* Toolbar */}
+          {!isLoading && (
+            <div className="mb-4 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+              <div className="flex-1">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by warehouse, commodity, or inspector"
+                  className="bg-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                  aria-label="From date"
+                />
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                  aria-label="To date"
+                />
+              </div>
+              <div className="text-sm text-gray-500">{filteredRows.length} result(s)</div>
+              <ModernButton
+                size="sm"
+                variant="outline"
+                onClick={() => { setQuery(""); setFromDate(""); setToDate(""); }}
+                className="bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
+                disabled={!query && !fromDate && !toDate}
+              >
+                Clear
+              </ModernButton>
+            </div>
+          )}
+
           {isLoading ? (
             <ShimmerTableComponent rows={5} columns={6} />
           ) : (
-            <ModernTable>
-              <ModernTableHeader>
-                <ModernTableRow isHeader>
-                  <ModernTableCell>Warehouse</ModernTableCell>
-                  <ModernTableCell>Commodity</ModernTableCell>
-                  <ModernTableCell>Inspector</ModernTableCell>
-                  <ModernTableCell>Status</ModernTableCell>
-                  <ModernTableCell>Submitted</ModernTableCell>
-                  <ModernTableCell>Actions</ModernTableCell>
-                </ModernTableRow>
-              </ModernTableHeader>
-              <ModernTableBody>
-                {rows.map((i) => (
-                  <ModernTableRow key={i.Id_Inspections}>
-                    <ModernTableCell className="font-medium">{i.warehouse?.name ?? "—"}</ModernTableCell>
-                    <ModernTableCell>{i.commodity?.name ?? "—"}</ModernTableCell>
-                    <ModernTableCell>{i.inspector?.full_name || i.inspector?.username || "—"}</ModernTableCell>
-                    <ModernTableCell>
-                      <StatusBadge status={i.Status as "Pending"} />
-                    </ModernTableCell>
-                    <ModernTableCell>{i.Created_At ? new Date(i.Created_At).toLocaleString() : ""}</ModernTableCell>
-                    <ModernTableCell>
-                      <ModernButton 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setSelectedId(i.Id_Inspections)}
-                        className="flex items-center gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Review
-                      </ModernButton>
-                    </ModernTableCell>
-                  </ModernTableRow>
-                ))}
-              </ModernTableBody>
-            </ModernTable>
+            <div className="space-y-3">
+              {filteredRows.map((i: any) => (
+                <div key={i.Id_Inspections} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow transition">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <div className="text-xs uppercase text-slate-500">Warehouse</div>
+                      <div className="font-medium">{i.warehouse?.name ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase text-slate-500">Commodity</div>
+                      <div>{i.commodity?.name ?? "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase text-slate-500">Inspector</div>
+                      <div>{i.inspector?.full_name || i.inspector?.username || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase text-slate-500">Status</div>
+                      <div className="mt-1"><StatusBadge status={i.Status as "Pending"} /></div>
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase text-slate-500">Submitted</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm">{i.Created_At ? new Date(i.Created_At).toLocaleString() : ""}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <ModernButton
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/manager/inspections/${i.Id_Inspections}`)}
+                      className="inline-flex items-center gap-2 bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Review
+                    </ModernButton>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
+
           {!isLoading && rows.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -107,93 +173,7 @@ export default function ManagerInspectionsPage() {
         </ModernCardContent>
       </ModernCard>
 
-      <Dialog open={!!selectedId} onOpenChange={(o) => !o && setSelectedId(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Review Inspection - {detail?.inspection?.inspector?.full_name || detail?.inspection?.inspector?.username || "—"}
-            </DialogTitle>
-          </DialogHeader>
-          {detailLoading ? (
-            <ShimmerInspectionDetail />
-          ) : detail ? (
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-600">Warehouse</p>
-                  <p className="font-medium">{detail.inspection.warehouse?.name ?? "—"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Inspector</p>
-                  <p className="font-medium">{detail.inspection.inspector?.full_name || detail.inspection.inspector?.username || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Commodity</p>
-                  <p className="font-medium">{detail.inspection.commodity?.name ?? "—"}</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Inspection Answers</h3>
-                {detail.answers.map((a) => (
-                  <div key={a.question_id} className="rounded-xl border p-4 bg-white">
-                    <p className="font-semibold text-gray-900 mb-2">{a.question_text}</p>
-                    <p className="text-gray-700 mb-1"><strong>Answer:</strong> {a.answer ?? "—"}</p>
-                    {a.remarks && <p className="text-gray-600"><strong>Remarks:</strong> {a.remarks}</p>}
-                    {a.evidence && a.evidence.length > 0 && (
-                      <div className="mt-3">
-                        <p className="font-medium text-gray-900 mb-2">Evidence for this answer:</p>
-                        <EvidenceDisplay evidence={a.evidence} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {detail.evidence.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">General Evidence</h3>
-                  <EvidenceDisplay evidence={detail.evidence} />
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Manager Remarks (Optional)</h3>
-                <Textarea 
-                  value={remarks} 
-                  onChange={(e) => setRemarks(e.target.value)} 
-                  placeholder="Enter your remarks about this inspection..."
-                  className="rounded-lg border-gray-300 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <ModernButton 
-                  variant="reject" 
-                  onClick={() => mutation.mutate({ id: selectedId!, status: "Rejected" })} 
-                  disabled={mutation.isPending}
-                  className="flex items-center gap-2"
-                >
-                  <XCircle className="h-4 w-4" />
-                  Reject
-                </ModernButton>
-                <ModernButton 
-                  variant="approve"
-                  onClick={() => mutation.mutate({ id: selectedId!, status: "Accepted" })} 
-                  disabled={mutation.isPending}
-                  className="flex items-center gap-2"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Approve
-                </ModernButton>
-              </div>
-            </div>
-          ) : (
-            <p className="text-center py-8 text-gray-500">Failed to load inspection details.</p>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Review is handled on a dedicated page; dialog removed */}
 
       <ZoomDialog open={!!zoomedImage} onOpenChange={(open) => !open && setZoomedImage(null)}>
         <ZoomDialogContent className="max-w-4xl">
