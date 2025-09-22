@@ -7,6 +7,7 @@ import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Suspense } from "react"
 import { QueryProvider } from "@/components/query-provider"
+import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
   title: "Warehouse Inspection Admin Panel",
@@ -27,6 +28,7 @@ export default function RootLayout({
             <AuthProvider>{children}</AuthProvider>
           </QueryProvider>
         </Suspense>
+        <Toaster />
         <Analytics />
       </body>
     </html>

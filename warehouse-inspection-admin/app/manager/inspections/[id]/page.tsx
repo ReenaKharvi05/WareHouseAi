@@ -2,13 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { getInspectionDetail } from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { Dialog as ZoomDialog, DialogContent as ZoomDialogContent } from "@/components/ui/dialog"
 import { useState } from "react"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, FileText, User, Warehouse, Package } from "lucide-react"
+import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card"
+import { ModernButton } from "@/components/ui/modern-button"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { EvidenceDisplay } from "@/components/ui/evidence-display"
+import { ShimmerInspectionDetail } from "@/components/ui/shimmer"
 
 interface InspectionDetailPageProps {
   params: {
@@ -27,118 +29,130 @@ export default function InspectionDetailPage({ params }: InspectionDetailPagePro
     enabled: !!inspectionId,
   })
 
-  if (isLoading) return <p className="p-6">Loading...</p>
-  if (!detail) return <p className="p-6">Inspection not found.</p>
+  if (isLoading) return <ShimmerInspectionDetail />
+  if (!detail) return (
+    <div className="bg-gray-50 min-h-screen p-6">
+      <div className="text-center py-12">
+        <p className="text-gray-500">Inspection not found.</p>
+        <ModernButton onClick={() => router.back()} className="mt-4">
+          Go Back
+        </ModernButton>
+      </div>
+    </div>
+  )
 
   const { inspection, answers, evidence } = detail
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gray-50 min-h-screen p-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
+        <ModernButton variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back
-        </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Inspection Details</h1>
+        </ModernButton>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Inspection Details</h1>
       </div>
 
       {/* Inspection Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Inspection Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Warehouse</p>
-              <p className="font-medium">{inspection.warehouse?.name ?? "—"}</p>
+      <ModernCard>
+        <ModernCardHeader>
+          <ModernCardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Inspection Overview
+          </ModernCardTitle>
+        </ModernCardHeader>
+        <ModernCardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Warehouse className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Warehouse</p>
+                <p className="font-semibold text-gray-900">{inspection.warehouse?.name ?? "—"}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Commodity</p>
-              <p className="font-medium">{inspection.commodity?.name ?? "—"}</p>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Package className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Commodity</p>
+                <p className="font-semibold text-gray-900">{inspection.commodity?.name ?? "—"}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Inspector</p>
-              <p className="font-medium">
-                {inspection.inspector?.full_name || inspection.inspector?.username || "—"}
-              </p>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <User className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Inspector</p>
+                <p className="font-semibold text-gray-900">
+                  {inspection.inspector?.full_name || inspection.inspector?.username || "—"}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <Badge variant={inspection.status === "Accepted" ? "default" : "destructive"}>
-                {inspection.status}
-              </Badge>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <FileText className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Status</p>
+                <StatusBadge status={inspection.status as "Pending" | "Accepted" | "Rejected"} />
+              </div>
             </div>
           </div>
           {inspection.manager_remarks && (
-            <div className="mt-4">
-              <p className="text-sm text-muted-foreground">Manager Remarks</p>
-              <p className="font-medium">{inspection.manager_remarks}</p>
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-600 mb-2">Manager Remarks</p>
+              <p className="text-gray-900">{inspection.manager_remarks}</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </ModernCardContent>
+      </ModernCard>
 
       {/* Answers */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Inspection Answers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+      <ModernCard>
+        <ModernCardHeader>
+          <ModernCardTitle>Inspection Answers</ModernCardTitle>
+        </ModernCardHeader>
+        <ModernCardContent>
+          <div className="space-y-6">
             {answers.map((answer) => (
-              <div key={answer.question_id} className="rounded-lg border p-4">
-                <p className="font-semibold mb-2">{answer.question_text}</p>
-                <p className="text-muted-foreground mb-2">
-                  <strong>Answer:</strong> {answer.answer ?? "—"}
-                </p>
-                {answer.remarks && (
-                  <p className="text-muted-foreground">
-                    <strong>Remarks:</strong> {answer.remarks}
+              <div key={answer.question_id} className="rounded-xl border border-gray-200 p-6 bg-white">
+                <p className="font-semibold text-gray-900 mb-3">{answer.question_text}</p>
+                <div className="space-y-2">
+                  <p className="text-gray-700">
+                    <strong className="text-gray-900">Answer:</strong> {answer.answer ?? "—"}
                   </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Evidence */}
-      {evidence.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Evidence</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {evidence.map((item) => (
-                <div key={item.id} className="space-y-2">
-                  {item.file_type?.startsWith("image/") ? (
-                    <div className="aspect-square overflow-hidden rounded-lg border">
-                      <img
-                        src={item.file_url}
-                        alt="Evidence"
-                        className="w-full h-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
-                        onClick={() => setZoomedImage(item.file_url)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="aspect-square border rounded-lg flex items-center justify-center">
-                      <a
-                        href={item.file_url}
-                        className="text-blue-600 underline text-sm text-center p-2"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download File
-                      </a>
+                  {answer.remarks && (
+                    <p className="text-gray-600">
+                      <strong className="text-gray-900">Remarks:</strong> {answer.remarks}
+                    </p>
+                  )}
+                  {answer.evidence && answer.evidence.length > 0 && (
+                    <div className="mt-4">
+                      <p className="font-medium text-gray-900 mb-3">Evidence for this answer:</p>
+                      <EvidenceDisplay evidence={answer.evidence} />
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+          </div>
+        </ModernCardContent>
+      </ModernCard>
+
+      {/* Evidence */}
+      {evidence.length > 0 && (
+        <ModernCard>
+          <ModernCardHeader>
+            <ModernCardTitle>General Evidence</ModernCardTitle>
+          </ModernCardHeader>
+          <ModernCardContent>
+            <EvidenceDisplay evidence={evidence} />
+          </ModernCardContent>
+        </ModernCard>
       )}
 
       {/* Image Zoom Dialog */}

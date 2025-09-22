@@ -1,16 +1,20 @@
 "use client"
 
 import { useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/contexts/auth-context"
 import { fetchInspectorWarehouses } from "@/lib/api"
 import type { Warehouse } from "@/lib/types"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
+import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card"
+import { ShimmerCard } from "@/components/ui/shimmer"
+import { Warehouse as WarehouseIcon, MapPin, Package, Navigation } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function InspectorDashboardPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
 
   const { data, isLoading } = useQuery({
     queryKey: ["inspector-warehouses", user?.id],
@@ -34,8 +38,6 @@ export default function InspectorDashboardPage() {
     enabled: !!user?.id,
   })
 
-  if (isLoading) return <p className="p-6">Loading...</p>
-
   function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371e3
     const φ1 = (lat1 * Math.PI) / 180
@@ -49,50 +51,115 @@ export default function InspectorDashboardPage() {
 
   const handleWarehouseClick = (warehouse: Warehouse) => {
     if (!("geolocation" in navigator)) {
-      alert("Geolocation is not supported by your browser.")
+      toast({
+        variant: "destructive",
+        title: "Location not supported",
+        description: "Geolocation is not supported by your browser.",
+      })
       return
     }
-
+  
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude, accuracy } = position.coords
         const [whLat, whLng] = warehouse.location.split(",").map(Number)
         const distance = getDistance(latitude, longitude, whLat, whLng)
         const tolerance = Math.max(200, accuracy)
+  
         if (distance <= tolerance) {
-          router.push(`/inspector/warehouses/${warehouse.id}`)
+          toast({
+            title: "Location Matched ✅",
+            description: `You are at ${warehouse.name}. Redirecting...`,
+          })
+          setTimeout(() => {
+            router.push(`/inspector/warehouses/${warehouse.id}`)
+          }, 800)
         } else {
-          alert(`You are not at the warehouse location. (Distance: ${Math.round(distance)}m, Allowed: ${Math.round(tolerance)}m)`) 
+          toast({
+            variant: "destructive",
+            title: "Location Not Matched ❌",
+            description: `Distance: ${Math.round(distance)}m (Allowed: ${Math.round(tolerance)}m)`,
+          })
         }
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
-          alert("Please enable location services to proceed.")
+          toast({
+            variant: "destructive",
+            title: "Permission Denied",
+            description: "Please enable location services to proceed.",
+          })
         } else {
-          alert("Unable to fetch your location. Try again.")
+          toast({
+            variant: "destructive",
+            title: "Location Error",
+            description: "Unable to fetch your location. Try again.",
+          })
         }
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
   }
+  
 
   const warehouses = data ?? []
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">My Warehouses</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {warehouses.map((wh) => (
-          <Card key={wh.id} className="cursor-pointer hover:shadow-lg transition" onClick={() => handleWarehouseClick(wh)}>
-            <CardHeader>
-              <CardTitle>{wh.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{wh.address}</p>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-6 bg-gray-50 min-h-screen p-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">My Warehouses</h1>
+        <p className="text-gray-600 mt-2">Select a warehouse to start inspection</p>
       </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ShimmerCard key={i} className="h-32" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {warehouses.map((wh) => (
+            <ModernCard 
+              key={wh.id} 
+              className="cursor-pointer hover:shadow-xl transition-all duration-200 hover:scale-105 group"
+              onClick={() => handleWarehouseClick(wh)}
+            >
+              <ModernCardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                    <WarehouseIcon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <ModernCardTitle className="text-lg">{wh.name}</ModernCardTitle>
+                </div>
+              </ModernCardHeader>
+              <ModernCardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-sm">{wh.address}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Package className="h-4 w-4" />
+                    <span className="text-sm">Capacity: {wh.capacityTons} tons</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                    <Navigation className="h-4 w-4" />
+                    <span>Tap to inspect</span>
+                  </div>
+                </div>
+              </ModernCardContent>
+            </ModernCard>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && warehouses.length === 0 && (
+        <div className="text-center py-12">
+          <WarehouseIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p className="text-gray-500">No warehouses assigned to you.</p>
+        </div>
+      )}
     </div>
   )
 }

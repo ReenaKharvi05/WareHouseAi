@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useQuery } from "@tanstack/react-query"
 import { listInspections } from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card"
+import { ModernTable, ModernTableHeader, ModernTableBody, ModernTableRow, ModernTableCell, ShimmerTableComponent } from "@/components/ui/modern-table"
+import { ModernButton } from "@/components/ui/modern-button"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { FileText, Eye, Calendar, MessageSquare } from "lucide-react"
 
 export default function InspectorInspectionsPage() {
   const { user } = useAuth()
@@ -22,53 +23,88 @@ export default function InspectorInspectionsPage() {
     enabled: !!user?.id,
   })
 
-  if (isLoading) return <p className="p-6">Loading...</p>
-
   const rows = data ?? []
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">My Inspections</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Inspections</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Warehouse</TableHead>
-                  <TableHead>Commodity</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Manager Remarks</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+    <div className="space-y-6 bg-gray-50 min-h-screen p-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">My Inspections</h1>
+        <p className="text-gray-600 mt-2">View all your submitted inspections</p>
+      </div>
+
+      <ModernCard>
+        <ModernCardHeader>
+          <ModernCardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Inspection History
+          </ModernCardTitle>
+        </ModernCardHeader>
+        <ModernCardContent>
+          {isLoading ? (
+            <ShimmerTableComponent rows={5} columns={6} />
+          ) : (
+            <ModernTable>
+              <ModernTableHeader>
+                <ModernTableRow isHeader>
+                  <ModernTableCell>Warehouse</ModernTableCell>
+                  <ModernTableCell>Commodity</ModernTableCell>
+                  <ModernTableCell>Status</ModernTableCell>
+                  <ModernTableCell>Manager Remarks</ModernTableCell>
+                  <ModernTableCell>Created</ModernTableCell>
+                  <ModernTableCell>Actions</ModernTableCell>
+                </ModernTableRow>
+              </ModernTableHeader>
+              <ModernTableBody>
                 {rows.map((i) => (
-                  <TableRow key={i.Id_Inspections}>
-                    <TableCell>{i.warehouse?.name ?? "—"}</TableCell>
-                    <TableCell>{i.commodity?.name ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge>{i.Status}</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">{i.Manager_Remarks || "—"}</TableCell>
-                    <TableCell>{i.Created_At ? new Date(i.Created_At).toLocaleString() : ""}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/inspector/inspections/${i.Id_Inspections}`)}>
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  <ModernTableRow key={i.Id_Inspections}>
+                    <ModernTableCell className="font-medium">{i.warehouse?.name ?? "—"}</ModernTableCell>
+                    <ModernTableCell>{i.commodity?.name ?? "—"}</ModernTableCell>
+                    <ModernTableCell>
+                      <StatusBadge status={i.Status as "Pending" | "Accepted" | "Rejected"} />
+                    </ModernTableCell>
+                    <ModernTableCell className="max-w-xs truncate">
+                      {i.Manager_Remarks ? (
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm">{i.Manager_Remarks}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </ModernTableCell>
+                    <ModernTableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm">
+                          {i.Created_At ? new Date(i.Created_At).toLocaleDateString() : ""}
+                        </span>
+                      </div>
+                    </ModernTableCell>
+                    <ModernTableCell>
+                      <ModernButton 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => router.push(`/inspector/inspections/${i.Id_Inspections}`)}
+                        className="flex items-center gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Details
+                      </ModernButton>
+                    </ModernTableCell>
+                  </ModernTableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-          {rows.length === 0 && <p className="p-6 text-muted-foreground">No inspections yet.</p>}
-        </CardContent>
-      </Card>
+              </ModernTableBody>
+            </ModernTable>
+          )}
+          {!isLoading && rows.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No inspections submitted yet.</p>
+              <p className="text-sm mt-2">Start by selecting a warehouse from the dashboard.</p>
+            </div>
+          )}
+        </ModernCardContent>
+      </ModernCard>
     </div>
   )
 }

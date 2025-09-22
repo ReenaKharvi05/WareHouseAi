@@ -1,86 +1,98 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClipboardCheck, Clock, CheckCircle, XCircle, Warehouse, Users, TrendingUp } from "lucide-react"
 import type { DashboardStats } from "@/lib/types"
+import { ShimmerStatsCard } from "@/components/ui/shimmer"
 
 interface StatsCardsProps {
   stats: DashboardStats
+  isLoading?: boolean
 }
 
-export function StatsCards({ stats }: StatsCardsProps) {
+export function StatsCards({ stats, isLoading = false }: StatsCardsProps) {
   const cards = [
     {
       title: "Total Inspections",
       value: stats.totalInspections,
       icon: ClipboardCheck,
       description: "All time inspections",
-      color: "text-blue-600",
+      bgColor: "bg-blue-500",
     },
     {
       title: "Pending",
       value: stats.pendingInspections,
       icon: Clock,
       description: "Awaiting inspection",
-      color: "text-yellow-600",
+      bgColor: "bg-yellow-500",
     },
     {
       title: "Completed",
       value: stats.completedInspections,
       icon: CheckCircle,
       description: "Successfully completed",
-      color: "text-green-600",
+      bgColor: "bg-green-500",
     },
     {
       title: "In Progress",
       value: stats.inProgressInspections,
       icon: XCircle,
       description: "In Progress inspections",
-      color: "text-red-600",
+      bgColor: "bg-red-500",
     },
     {
       title: "Warehouses",
       value: stats.totalWarehouses,
       icon: Warehouse,
       description: "Active locations",
-      color: "text-purple-600",
+      bgColor: "bg-purple-500",
     },
     {
       title: "Inspectors",
       value: stats.activeInspectors,
       icon: Users,
       description: "Active inspectors",
-      color: "text-indigo-600",
+      bgColor: "bg-indigo-500",
     },
     {
       title: "Managers",
       value: stats.activeManagers,
       icon: Users,
       description: "Active Managers",
-      color: "text-indigo-600",
+      bgColor: "bg-pink-500",
     },
     {
       title: "Average Score",
       value: `${stats.averageScore}%`,
       icon: TrendingUp,
       description: "Overall performance",
-      color: "text-emerald-600",
+      bgColor: "bg-emerald-500",
     },
   ]
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <ShimmerStatsCard key={index} />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card, index) => (
-        <Card key={index}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-            <card.icon className={`h-4 w-4 ${card.color}`} />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{card.value}</div>
-            <p className="text-xs text-muted-foreground">{card.description}</p>
-          </CardContent>
-        </Card>
+        <div
+          key={index}
+          className={`${card.bgColor} rounded-xl shadow-lg p-6 text-white hover:shadow-xl transition-shadow`}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-white/90">{card.title}</h3>
+            <card.icon className="h-6 w-6 text-white/80" />
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">{card.value}</div>
+          <p className="text-xs text-white/70">{card.description}</p>
+        </div>
       ))}
     </div>
   )

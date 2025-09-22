@@ -10,16 +10,16 @@ export default function ManagerLayout({
 }) {
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-gray-50">
         <div className="hidden md:flex md:w-64 md:flex-col">
-          <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-background border-r">
+          <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-blue-700 border-r">
             <Sidebar />
           </div>
         </div>
         <div className="flex flex-col flex-1 overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-y-auto bg-muted/10">
-            <div className="container mx-auto px-4 py-6 md:px-6">{children}</div>
+          <main className="flex-1 overflow-y-auto">
+            {children}
           </main>
         </div>
       </div>

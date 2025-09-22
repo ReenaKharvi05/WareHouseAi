@@ -1,42 +1,28 @@
 "use client"
 
 import type React from "react"
-import { Sidebar, MobileSidebar } from "@/components/layout/sidebar"   // ✅ reuse sidebar component
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
+import { Sidebar, MobileSidebar } from "@/components/layout/sidebar"
+import { Header } from "@/components/layout/header"
 
 export default function InspectorLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth()
-  const router = useRouter()
-
-  const handleLogout = () => {
-    logout()
-    router.push("/login")
-  }
-
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar (desktop + mobile) */}
-      <div className="hidden md:flex">
-        <Sidebar className="w-64 border-r" />
+      <div className="hidden md:flex md:w-64 md:flex-col">
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-blue-700 border-r">
+          <Sidebar />
+        </div>
       </div>
       <div className="md:hidden">
         <MobileSidebar />
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-4 border-b bg-white">
-          <h1 className="text-lg font-semibold">Welcome back, {user?.username}</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
     </div>
   )

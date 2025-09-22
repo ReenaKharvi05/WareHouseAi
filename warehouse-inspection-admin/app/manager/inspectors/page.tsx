@@ -3,122 +3,139 @@
 import { useAuth } from "@/contexts/auth-context"
 import { useQuery } from "@tanstack/react-query"
 import { getManagerInspectors, listInspections } from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useState } from "react"
+import { ModernCard, ModernCardHeader, ModernCardTitle, ModernCardContent } from "@/components/ui/modern-card"
+import { ModernTable, ModernTableHeader, ModernTableBody, ModernTableRow, ModernTableCell, ShimmerTableComponent } from "@/components/ui/modern-table"
+import { ModernButton } from "@/components/ui/modern-button"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Eye, Users } from "lucide-react"
 
 export default function ManagerInspectorsPage() {
   const { user } = useAuth()
   const managerId = user?.id || 0
   const [selectedInspector, setSelectedInspector] = useState<number | null>(null)
 
-  const { data: inspectors, isLoading } = useQuery({
+  const { data: inspectors, isLoading: inspectorsLoading } = useQuery({
     queryKey: ["manager-inspectors", managerId],
     queryFn: () => getManagerInspectors(managerId),
     enabled: !!managerId,
   })
 
-  const { data: inspections } = useQuery({
+  const { data: inspections, isLoading: inspectionsLoading } = useQuery({
     queryKey: ["inspector-inspections", selectedInspector],
     queryFn: () => listInspections({ inspector_id: selectedInspector }),
     enabled: !!selectedInspector,
   })
 
-  if (isLoading) return <p className="p-6">Loading...</p>
-
   const selectedInspectorData = inspectors?.find(ins => ins.id === selectedInspector)
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Inspectors</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Inspectors under you</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Full Name</TableHead>
-                  <TableHead>Assigned Warehouses</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+    <div className="space-y-6 bg-gray-50 min-h-screen p-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Inspectors</h1>
+        <p className="text-gray-600 mt-2">Manage inspectors under your supervision</p>
+      </div>
+
+      <ModernCard>
+        <ModernCardHeader>
+          <ModernCardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Inspectors under you
+          </ModernCardTitle>
+        </ModernCardHeader>
+        <ModernCardContent>
+          {inspectorsLoading ? (
+            <ShimmerTableComponent rows={5} columns={4} />
+          ) : (
+            <ModernTable>
+              <ModernTableHeader>
+                <ModernTableRow isHeader>
+                  <ModernTableCell>Username</ModernTableCell>
+                  <ModernTableCell>Full Name</ModernTableCell>
+                  <ModernTableCell>Assigned Warehouses</ModernTableCell>
+                  <ModernTableCell>Actions</ModernTableCell>
+                </ModernTableRow>
+              </ModernTableHeader>
+              <ModernTableBody>
                 {(inspectors || []).map((ins) => (
-                  <TableRow
+                  <ModernTableRow
                     key={ins.id}
-                    className={selectedInspector === ins.id ? "bg-muted/40" : ""}
+                    className={selectedInspector === ins.id ? "bg-blue-50 border-blue-200" : ""}
                   >
-                    <TableCell>{ins.UserName}</TableCell>
-                    <TableCell>{ins.Full_Name || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">View Details</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
+                    <ModernTableCell className="font-medium">{ins.UserName}</ModernTableCell>
+                    <ModernTableCell>{ins.Full_Name || "—"}</ModernTableCell>
+                    <ModernTableCell>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        View Details
+                      </Badge>
+                    </ModernTableCell>
+                    <ModernTableCell>
+                      <ModernButton 
                         size="sm" 
-                        variant="outline" 
+                        variant={selectedInspector === ins.id ? "primary" : "outline"}
                         onClick={() => setSelectedInspector(ins.id)}
+                        className="flex items-center gap-2"
                       >
+                        <Eye className="h-4 w-4" />
                         View Inspections
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                      </ModernButton>
+                    </ModernTableCell>
+                  </ModernTableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              </ModernTableBody>
+            </ModernTable>
+          )}
+          {!inspectorsLoading && (!inspectors || inspectors.length === 0) && (
+            <div className="text-center py-12 text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No inspectors found under your supervision.</p>
+            </div>
+          )}
+        </ModernCardContent>
+      </ModernCard>
 
       {selectedInspector && selectedInspectorData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <ModernCard>
+          <ModernCardHeader>
+            <ModernCardTitle>
               Inspections by {selectedInspectorData.Full_Name || selectedInspectorData.UserName}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Warehouse</TableHead>
-                    <TableHead>Commodity</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            </ModernCardTitle>
+          </ModernCardHeader>
+          <ModernCardContent>
+            {inspectionsLoading ? (
+              <ShimmerTableComponent rows={5} columns={4} />
+            ) : (
+              <ModernTable>
+                <ModernTableHeader>
+                  <ModernTableRow isHeader>
+                    <ModernTableCell>Warehouse</ModernTableCell>
+                    <ModernTableCell>Commodity</ModernTableCell>
+                    <ModernTableCell>Submitted</ModernTableCell>
+                    <ModernTableCell>Status</ModernTableCell>
+                  </ModernTableRow>
+                </ModernTableHeader>
+                <ModernTableBody>
                   {(inspections || []).map((i) => (
-                    <TableRow key={i.Id_Inspections}>
-                      <TableCell>{i.warehouse?.name ?? "—"}</TableCell>
-                      <TableCell>{i.commodity?.name ?? "—"}</TableCell>
-                      <TableCell>{i.Created_At ? new Date(i.Created_At).toLocaleString() : ""}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          i.Status === "Accepted" ? "default" : 
-                          i.Status === "Rejected" ? "destructive" : 
-                          "secondary"
-                        }>
-                          {i.Status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                    <ModernTableRow key={i.Id_Inspections}>
+                      <ModernTableCell className="font-medium">{i.warehouse?.name ?? "—"}</ModernTableCell>
+                      <ModernTableCell>{i.commodity?.name ?? "—"}</ModernTableCell>
+                      <ModernTableCell>{i.Created_At ? new Date(i.Created_At).toLocaleString() : ""}</ModernTableCell>
+                      <ModernTableCell>
+                        <StatusBadge status={i.Status as "Pending" | "Accepted" | "Rejected"} />
+                      </ModernTableCell>
+                    </ModernTableRow>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-            {(!inspections || inspections.length === 0) && (
-              <p className="p-6 text-muted-foreground">No inspections found for this inspector.</p>
+                </ModernTableBody>
+              </ModernTable>
             )}
-          </CardContent>
-        </Card>
+            {!inspectionsLoading && (!inspections || inspections.length === 0) && (
+              <div className="text-center py-12 text-gray-500">
+                <p>No inspections found for this inspector.</p>
+              </div>
+            )}
+          </ModernCardContent>
+        </ModernCard>
       )}
     </div>
   )
