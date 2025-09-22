@@ -59,13 +59,13 @@ export function StatsCards({ stats }: StatsCardsProps) {
       description: "Active Managers",
       color: "text-indigo-600",
     },
-    {
-      title: "Average Score",
-      value: `${stats.averageScore}%`,
-      icon: TrendingUp,
-      description: "Overall performance",
-      color: "text-emerald-600",
-    },
+    // {
+    //   title: "Average Score",
+    //   value: `${stats.averageScore}%`,
+    //   icon: TrendingUp,
+    //   description: "Overall performance",
+    //   color: "text-emerald-600",
+    // },
   ]
 
   return (

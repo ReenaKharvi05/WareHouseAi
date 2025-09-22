@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
+import CommodityAddForm from "@/components/commodities/commodity-add-form"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Search, MoreHorizontal, Edit, Trash2, Plus, Package } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { createCommodity, deleteCommodity, getCommodities, updateCommodity, type ApiCommodity } from "@/lib/api"
+import CommodityActions from "@/components/commodities/commodity-actions"
+
+import { createCommodity, deleteCommodity, getCommodities, updateCommodity, softDeleteCommodity, type ApiCommodity } from "@/lib/api"
 
 export default function CommoditiesPage() {
   const [rows, setRows] = useState<ApiCommodity[]>([])
@@ -45,6 +48,13 @@ export default function CommoditiesPage() {
   }, [categoryFilter, storageFilter, activeFilter])
 
   const filtered = useMemo(() => rows, [rows])
+  const [editOpen, setEditOpen] = useState(false);
+const [editCommodity, setEditCommodity] = useState<ApiCommodity | null>(null);
+const handleEdit = (commodity: ApiCommodity) => {
+  setEditCommodity(commodity)
+  setEditOpen(true)
+}
+
 
   const uniqueCategories = useMemo(() => Array.from(new Set(rows.map((c) => c.Category).filter(Boolean))) as string[], [rows])
 
@@ -63,10 +73,7 @@ export default function CommoditiesPage() {
                 <CardTitle>Commodity Management</CardTitle>
                 <CardDescription>Manage commodity types available for inspection</CardDescription>
               </div>
-              <Button onClick={() => load()}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Commodity
-              </Button>
+              <CommodityAddForm onSuccess={load} />
             </div>
           </CardHeader>
           <CardContent>
@@ -129,54 +136,51 @@ export default function CommoditiesPage() {
                 <div className="p-6 text-muted-foreground">Loading...</div>
               ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>IdCommodity</TableHead>
-                    <TableHead>Commodity_Name</TableHead>
-                    <TableHead>CommodityStorage</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>IsActive</TableHead>
-                    <TableHead>CreatedAt</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((c) => (
-                    <TableRow key={c.IdCommodity}>
-                      <TableCell>{c.IdCommodity}</TableCell>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        {c.Commodity_Name}
-                      </TableCell>
-                      <TableCell>{c.CommodityStorage || "-"}</TableCell>
-                      <TableCell>{c.Category || "-"}</TableCell>
-                      <TableCell className="max-w-[240px] truncate" title={c.Description || undefined}>{c.Description || "-"}</TableCell>
-                      <TableCell>{c.IsActive ?? 0}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{c.CreatedAt ? new Date(c.CreatedAt).toLocaleDateString() : "-"}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {/* open edit modal with c */}}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => deleteCommodity(c.IdCommodity).then(load)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+  <TableHeader>
+    <TableRow>
+      {/* Removed IdCommodity column */}
+      <TableHead>Commodity_Name</TableHead>
+      <TableHead>CommodityStorage</TableHead>
+      <TableHead>Category</TableHead>
+      <TableHead>Description</TableHead>
+      <TableHead>Status</TableHead> {/* Changed from IsActive */}
+      <TableHead>CreatedAt</TableHead>
+      <TableHead className="w-12"></TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    {filtered.map((c) => (
+      <TableRow key={c.IdCommodity}>
+        {/* Removed IdCommodity cell */}
+        <TableCell className="font-medium flex items-center gap-2">
+          <Package className="h-4 w-4 text-muted-foreground" />
+          {c.Commodity_Name}
+        </TableCell>
+        <TableCell>{c.CommodityStorage || "-"}</TableCell>
+        <TableCell>{c.Category || "-"}</TableCell>
+        <TableCell className="max-w-[240px] truncate" title={c.Description || undefined}>
+          {c.Description || "-"}
+        </TableCell>
+        <TableCell>
+          {c.IsActive === 1 ? "Active" : "Inactive"} {/* Updated status display */}
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {c.CreatedAt ? new Date(c.CreatedAt).toLocaleDateString() : "-"}
+        </TableCell>
+        <TableCell>
+  <CommodityActions
+    commodity={c}
+    onEdit={handleEdit}
+    onDeleted={load} // refresh after delete
+  />
+</TableCell>
+
+
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
+
               )}
             </div>
 

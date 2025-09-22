@@ -75,4 +75,13 @@ def delete(commodity_id: int, db: Session = Depends(get_db)):
     db.commit()
     return None
 
-
+@router.put("/soft-delete/{commodity_id}", response_model=CommodityResponse)
+def soft_delete(commodity_id: int, db: Session = Depends(get_db)):
+    entity = db.query(Commodity).filter(Commodity.IdCommodity == commodity_id).first()
+    if not entity:
+        raise HTTPException(status_code=404, detail="Commodity not found")
+    
+    entity.IsActive = 0
+    db.commit()
+    db.refresh(entity)
+    return entity

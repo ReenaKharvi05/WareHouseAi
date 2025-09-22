@@ -93,4 +93,13 @@ class Commodity(BaseModel):
     class Config:
         orm_mode = True
 
-        
+class UserHierarchyResponse(BaseModel):
+    idusers: int
+    UserName: Optional[str]
+    Full_Name: Optional[str]
+    Role: Optional[str]
+    EmailId: Optional[str]
+    Is_Active: Optional[int]
+
+    class Config:
+        orm_mode = True

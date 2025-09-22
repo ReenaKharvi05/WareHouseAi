@@ -187,12 +187,14 @@ export async function deleteWarehouse(id: number): Promise<void> {
   await api.delete(`/users/${id}`)
 }
 
+
 export interface ApiUser {
   idusers: number
   UserName: string
   Full_Name: string | null
   Role: string
   EmailId: string | null
+  Password: string
   Is_Active: number | null
 }
 
@@ -270,4 +272,13 @@ export async function updateCommodity(id: number, payload: UpdateApiCommodity): 
 
 export async function deleteCommodity(id: number): Promise<void> {
   await api.delete(`/commodities/${id}`)
+}
+
+export const softDeleteCommodity = async (id: number) => {
+  const res = await fetch(`/api/commodities/soft-delete/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+  })
+  if (!res.ok) throw new Error("Failed to delete commodity")
+  return res.json()
 }

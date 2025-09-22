@@ -8,16 +8,24 @@ export type RiskLevel = "Low" | "Medium" | "High" | "Critical"
 
 export type InspectionResponse = "Pass" | "Fail" | "N/A"
 
+// export interface User {
+//   id: number
+//   username: string
+//   email: string
+//   fullName: string
+//   role: UserRole
+//   phone?: string
+//   isActive: boolean
+//   createdAt: string
+//   updatedAt: string
+// }
 export interface User {
-  id: number
+  //id: number
   username: string
-  email: string
   fullName: string
-  role: UserRole
-  phone?: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+  role: string
+  email?: string
+  isActive?: boolean
 }
 
 export interface Warehouse {

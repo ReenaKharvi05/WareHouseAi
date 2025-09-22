@@ -115,3 +115,4 @@ def inspector_warehouses(inspector_id: int, db: Session = Depends(get_db)):
 def get_commodities(db: Session = Depends(get_db)):
     commodities = crud.get_all_commodities(db)
     return commodities
+

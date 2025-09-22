@@ -68,7 +68,7 @@ export function RecentInspections({ inspections }: RecentInspectionsProps) {
             {inspections.map((inspection) => {
               const warehouse = mockWarehouses.find((w) => w.id === inspection.warehouseId)
               const commodity = mockCommodities.find((c) => c.id === inspection.commodityId)
-              const inspector = mockUsers.find((u) => u.id === inspection.inspectorId)
+              //const inspector = mockUsers.find((u) => u.id === inspection.inspectorId)
 
               return (
                 <TableRow key={inspection.id}>
@@ -81,7 +81,7 @@ export function RecentInspections({ inspections }: RecentInspectionsProps) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     <div className="font-medium">{commodity?.name}</div>
                     <div className="text-sm text-muted-foreground">{commodity?.category}</div>
                   </TableCell>
@@ -90,7 +90,7 @@ export function RecentInspections({ inspections }: RecentInspectionsProps) {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{inspector?.fullName}</span>
                     </div>
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />

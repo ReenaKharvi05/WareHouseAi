@@ -192,7 +192,7 @@ def get_inspection_detail(inspection_id: int, request: Request, db: Session = De
     }
 
 
-@router.get("/inspectors/{inspector_id}/inspections")
+@router.get("/inspectorsWithId/{inspector_id}/inspections")
 def list_inspector_inspections(inspector_id: int, db: Session = Depends(get_db)):
     rows = (
         db.query(Inspections)

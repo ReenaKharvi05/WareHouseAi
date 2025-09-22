@@ -73,3 +73,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.commit()
     return None
 
+@router.get("/inspectorHierarchy", response_model=List[UserResponse])
+def get_active_inspectors(db: Session = Depends(get_db)):
+    return db.query(Users).filter(Users.Is_Active == 1, Users.Role == "Inspector").all()
